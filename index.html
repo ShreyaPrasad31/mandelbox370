@@ -4,7 +4,105 @@
 <title>Mandelbox370</title>
 <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
 
-<script id="shader-fs" type="x-shader/x-fragment">
+<script id="shader-3dbox" type="x-shader/x-fragment">
+    precision mediump float;
+    const int MAX_ITERS = 15;
+    const int MAX_STEPS = 128;
+    const float MAX_DIST = 50.0;
+    const float EPSILON = 0.0001;
+    const float SCALE = 3.0;
+    
+    // the texCoords passed in from the vertex shader.
+    varying vec2 v_texCoord;
+
+    uniform vec3 cameraPos;
+    uniform vec3 cameraLook;
+    uniform vec3 cameraUp;
+
+    float distanceEstimate(vec3 rayPos, float constant1, float constant2)
+    {
+        vec3 c = rayPos;
+        vec3 v = rayPos;
+        float dr = 1.0;
+
+        for (int i = 0; i < MAX_ITERS; i++)
+        {
+            // Box fold
+            v = clamp(v, -1.0, 1.0) * 2.0 - v;
+
+            // Sphere fold.
+            float mag = dot(v, v);
+            if (mag < 0.25)
+            {
+                v = v * 4.0;
+                dr = dr * 4.0;
+            }
+            else if (mag < 1.0)
+            {
+                v = v / mag;
+                dr = dr / mag;
+            }
+
+            v = v * SCALE + c;
+            dr = dr * abs(SCALE) + 1.0;
+        }
+
+        return (length(v) - constant1) / dr - constant2;
+    }
+
+    int rayMarch(vec3 rayDir) {
+        int stepCount = 0;
+        float distance = 0.0;
+
+        float constant1 = abs(SCALE - 1.0);
+        float constant2 = pow(float(abs(SCALE)), float(1 - MAX_ITERS));
+
+        for (int i = 0; i < MAX_STEPS; i++)
+        {
+            vec3 rayPos = cameraPos + rayDir * distance;
+            float de = distanceEstimate(rayPos, constant1, constant2);
+
+            // sphere
+            //de = length(rayPos) - 0.99;
+
+            distance += de * 0.95;
+            stepCount++;
+
+            if (de < EPSILON)
+                return stepCount;
+            else if (distance > MAX_DIST)
+                return 0;
+        }
+
+        return MAX_STEPS;
+    }
+
+    void main(void) {
+        // Calculate the unit vector representing the direction
+        // from the camera to pixel (x, y) on the projection plane.
+        vec3 w = normalize(cameraLook);
+        vec3 u = normalize(cross(cameraUp, w));
+        vec3 v = cross(w, u);
+
+        vec3 rayDir = w + u * (v_texCoord.x - 0.5) +
+                          v * (v_texCoord.y - 0.5);
+
+        int steps = rayMarch(rayDir);
+
+        if (steps > 0)
+        {
+            float distRatio = float(steps) / float(MAX_STEPS) * 0.7;
+            gl_FragColor = vec4(vec3(1.0, 1.0, 1.0) * distRatio, 1.0);
+        }
+        else
+            gl_FragColor = vec4(0.5, 0.3, 0.7, 1.0);
+
+        //gl_FragColor = vec4(0.0, rayDir.y+1.0, 1.0, 1.0);
+        //gl_FragColor = vec4(v_texCoord.x, v_texCoord.y, 1.0, 1.0);
+    }
+</script>
+
+<script id="shader-2dbox" type="x-shader/x-fragment">
     precision mediump float;
     const int MAX_ITERS = 15;
     const float SCALE = 2.0;
@@ -17,15 +115,18 @@
         vec2 c = v_texCoord * 13.0;
         vec2 v = v_texCoord * 13.0;
         for (int i = 0; i < MAX_ITERS; i++) {
-            if (v.x > 1.0)
-                v.x = 2.0 - v.x;
-            else if (v.x < -1.0)
-                v.x = -2.0 - v.x;
-            if (v.y > 1.0)
-                v.y = 2.0 - v.y;
-            else if (v.y < -1.0)
-                v.y = -2.0 - v.y;
+            // Box fold
+            // if (v.x > 1.0)
+            //     v.x = 2.0 - v.x;
+            // else if (v.x < -1.0)
+            //     v.x = -2.0 - v.x;
+            // if (v.y > 1.0)
+            //     v.y = 2.0 - v.y;
+            // else if (v.y < -1.0)
+            //     v.y = -2.0 - v.y;
+            v = clamp(v, -1.0, 1.0) * 2.0 - v;
 
+            // Sphere fold.
             float mag = v.x * v.x + v.y * v.y;
             if (mag < 0.25)
                 v = v * 4.0;
@@ -77,9 +178,11 @@
 <script type="text/javascript">
 
     var gl;
-    var shaderProgram;
+    var shaderProgram2D;
+    var shaderProgram3D;
 
-    var renderviewBuffer;
+    var renderview2DBuffer;
+    var renderview3DBuffer;
     var texCoordBuffer;
 
     function initGL(canvas) {
@@ -129,45 +232,60 @@
         return shader;
     }
 
-    function initShaders() {
-        var fragmentShader = getShader(gl, "shader-fs");
-        var vertexShader = getShader(gl, "shader-vs");
+    function createProgram(fragmentShaderID, vertexShaderID) {
+        var fragmentShader = getShader(gl, fragmentShaderID);
+        var vertexShader = getShader(gl, vertexShaderID);
 
-        shaderProgram = gl.createProgram();
-        gl.attachShader(shaderProgram, vertexShader);
-        gl.attachShader(shaderProgram, fragmentShader);
-        gl.linkProgram(shaderProgram);
+        program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
 
-        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
             alert("Could not initialise shaders");
         }
 
-        gl.useProgram(shaderProgram);
+        program.vertexPositionAttribute = 
+            gl.getAttribLocation(program, "position");
+        gl.enableVertexAttribArray(program.vertexPositionAttribute);
 
-        shaderProgram.vertexPositionAttribute = 
-            gl.getAttribLocation(shaderProgram, "position");
-        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+        program.texCoordAttribute = 
+            gl.getAttribLocation(program, "texCoord");
+        gl.enableVertexAttribArray(program.texCoordAttribute);
 
-        shaderProgram.texCoordAttribute = 
-            gl.getAttribLocation(shaderProgram, "texCoord");
-        gl.enableVertexAttribArray(shaderProgram.texCoordAttribute);
+        program.resolutionUniform = 
+            gl.getUniformLocation(program, "resolution");
 
-        shaderProgram.resolutionUniform = 
-            gl.getUniformLocation(shaderProgram, "resolution");
-        gl.uniform2f(shaderProgram.resolutionUniform, 
-            gl.viewportWidth, gl.viewportHeight);
+        return program;
+    }
+
+    function initShaders() {
+        shaderProgram2D = createProgram("shader-2dbox", "shader-vs");
+        shaderProgram3D = createProgram("shader-3dbox", "shader-vs");
+        shaderProgram3D.cameraPos = gl.getUniformLocation(shaderProgram3D,
+            "cameraPos");
+        shaderProgram3D.cameraLook = gl.getUniformLocation(shaderProgram3D,
+            "cameraLook");
+        shaderProgram3D.cameraUp = gl.getUniformLocation(shaderProgram3D,
+            "cameraUp");
     }
 
     function initBuffers() {
-        renderviewBuffer = gl.createBuffer();
-        vertices = [10, 10, 10, 470, 630, 10,
-                    10, 470, 630, 470, 630, 10]
-        gl.bindBuffer(gl.ARRAY_BUFFER, renderviewBuffer);
+        renderview2DBuffer = gl.createBuffer();
+        vertices = [600, 0, 600, 200, 800, 200,
+                    600, 0, 800, 200, 800, 0]
+        gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
-            2, gl.FLOAT, false, 0, 0);
-        renderviewBuffer.itemSize = 2;
-        renderviewBuffer.numItems = 6;
+        renderview2DBuffer.itemSize = 2;
+        renderview2DBuffer.numItems = 6;
+
+        renderview3DBuffer = gl.createBuffer();
+        vertices = [0, 0, 0, 600, 600, 0,
+                    0, 600, 600, 600, 600, 0]
+        gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        renderview3DBuffer.itemSize = 2;
+        renderview3DBuffer.numItems = 6;
 
         texCoordBuffer = gl.createBuffer();
         vertices = [ 0.0, 0.0, 0.0, 1.0, 1.0, 0.0,
@@ -176,17 +294,50 @@
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     }
 
+    function drawScene2D() {
+        gl.useProgram(shaderProgram2D);
+
+        gl.uniform2f(shaderProgram2D.resolutionUniform, 
+            gl.viewportWidth, gl.viewportHeight);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
+        gl.vertexAttribPointer(shaderProgram2D.vertexPositionAttribute, 
+            2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+        gl.vertexAttribPointer(shaderProgram2D.texCoordAttribute, 
+            2, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.TRIANGLES, 0, renderview2DBuffer.numItems);
+
+    }
+
+    function drawScene3D() {
+        gl.useProgram(shaderProgram3D);
+
+        gl.uniform2f(shaderProgram3D.resolutionUniform, 
+            gl.viewportWidth, gl.viewportHeight);
+
+        gl.uniform3f(shaderProgram3D.cameraPos, -13.6, 13.6, 13.6);
+        gl.uniform3f(shaderProgram3D.cameraLook, 1.0, -1.0, -1.0);
+        gl.uniform3f(shaderProgram3D.cameraUp, 1.0, 1.0, -1.0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
+        gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
+            2, gl.FLOAT, false, 0, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
+        gl.vertexAttribPointer(shaderProgram3D.texCoordAttribute, 
+            2, gl.FLOAT, false, 0, 0);
+
+        gl.drawArrays(gl.TRIANGLES, 0, renderview3DBuffer.numItems);
+
+    }
+
     function drawScene() {
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, renderviewBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, 
-            2, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-        gl.vertexAttribPointer(shaderProgram.texCoordAttribute, 
-            2, gl.FLOAT, false, 0, 0);
-        gl.drawArrays(gl.TRIANGLES, 0, renderviewBuffer.numItems);
+        drawScene2D();
+        drawScene3D();
     }
 
     function webGLStart() {
@@ -208,7 +359,7 @@
 
 
 <body onload="webGLStart();">
-    <canvas id="mandelbox-canvas" style="border: none;" width="640" height="480"></canvas>
+    <canvas id="mandelbox-canvas" style="border: none;" width="800" height="600"></canvas>
 </body>
 
 </html>
