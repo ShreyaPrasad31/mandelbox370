@@ -14,8 +14,8 @@
         position: absolute; 
         top: 0px; 
         left: 600px; 
-        width: 200px;
-        height: 200px;
+        width: 300px;
+        height: 300px;
     }
 </style>
 
@@ -193,15 +193,25 @@
     var renderview3DBuffer;
     var texCoordBuffer;
 
+    // UI
+    var view3DWidth  = 600;
+    var view3DHeight = 600;
+    var view2DWidth  = 300;
+    var view2DHeight = 300;
+    var view2DxPos   = 600;
+
+    // For mouse input
     var mouseDown = false;
     var lastMouseX = null;
     var lastMouseY = null;
 
+    // Mandelbox render/camera parameters
     var theta = Math.PI / 4;
     var phi = Math.PI / 4;
     var anchor = [0, 0, 0];
     var distance = 15;
 
+    // Mandelbox parameters
     var scaleFactor = 3.0;
 
     // JQuery stuff
@@ -309,16 +319,24 @@
 
     function initBuffers() {
         renderview2DBuffer = gl.createBuffer();
-        vertices = [600, 0, 600, 200, 800, 200,
-                    600, 0, 800, 200, 800, 0]
+        vertices = [view2DxPos, 0, 
+                    view2DxPos, view2DHeight, 
+                    view2DxPos + view2DWidth, view2DHeight,
+                    view2DxPos, 0, 
+                    view2DxPos + view2DWidth, view2DHeight, 
+                    view2DxPos + view2DWidth, 0]
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         renderview2DBuffer.itemSize = 2;
         renderview2DBuffer.numItems = 6;
 
         renderview3DBuffer = gl.createBuffer();
-        vertices = [0, 0, 0, 600, 600, 0,
-                    0, 600, 600, 600, 600, 0]
+        vertices = [0, 0, 
+                    0, view3DHeight, 
+                    view3DWidth, 0,
+                    0, view3DHeight, 
+                    view3DWidth, view3DHeight, 
+                    view3DWidth, 0]
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         renderview3DBuffer.itemSize = 2;
@@ -466,7 +484,7 @@
 
 <body onload="webGLStart();">
     <div id="canvas-wrap">
-        <canvas id="mandelbox-canvas" style="border: none;" width="800" height="600"></canvas>
+        <canvas id="mandelbox-canvas" style="border: none;" width="900" height="600"></canvas>
         <div id="overlay">
             <label for="slider-scale">Scale Factor</label>
             <input type="text" id="slider-scale" style="border:0; color:#f6931f; font-weight:bold;">
