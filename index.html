@@ -33,6 +33,7 @@
     uniform vec3 cameraLook;
     uniform vec3 cameraUp;
     uniform float scaleFactor;
+    uniform float sliceLocation;
 
     float distanceEstimate(vec3 rayPos, float constant1, float constant2)
     {
@@ -65,9 +66,8 @@
         return (length(v) - constant1) / dr - constant2;
     }
 
-    int rayMarch(vec3 rayDir) {
+    int rayMarch(vec3 rayDir, inout float distance) {
         int stepCount = 0;
-        float distance = 0.0;
 
         float constant1 = abs(scaleFactor - 1.0);
         float constant2 = pow(float(abs(scaleFactor)), float(1 - MAX_ITERS));
@@ -102,18 +102,28 @@
         vec3 rayDir = w + u * (v_texCoord.x - 0.5) +
                           v * (v_texCoord.y - 0.5);
 
-        int steps = rayMarch(rayDir);
+        float distance = 0.0;
+        int steps = rayMarch(rayDir, distance);
+
+        bool crossedPlane = 
+            (cameraPos.x < sliceLocation) != ((cameraPos + distance * rayDir).x < sliceLocation);
+
+        // Base background color.
+        vec4 color = vec4(0.5, 0.3, 0.7, 1.0);
 
         if (steps > 0)
         {
             float distRatio = float(steps) / float(MAX_STEPS) * 0.7;
-            gl_FragColor = vec4(vec3(1.0, 1.0, 1.0) * (1.0 - distRatio), 1.0);
+            color = vec4(vec3(1.0, 1.0, 1.0) * (1.0 - distRatio), 1.0);
         }
-        else
-            gl_FragColor = vec4(0.5, 0.3, 0.7, 1.0);
+
+        if (crossedPlane)
+            color += vec4(-0.1, -0.1, 0.3, 0.0);
+
+        gl_FragColor = color;
 
         //gl_FragColor = vec4(0.0, rayDir.y+1.0, 1.0, 1.0);
-        //gl_FragColor = vec4(v_texCoord.x, v_texCoord.y, 1.0, 1.0);
+        //gl_FragColor = vec4(v_texCoord.x, v_texCoord.y, 1.0, 1.0) ;
     }
 </script>
 
@@ -324,6 +334,7 @@
             gl.getUniformLocation(program, "resolution");
 
         program.paramScale = gl.getUniformLocation(program, "scaleFactor");
+        program.sliceLocation = gl.getUniformLocation(program, "sliceLocation");
 
         return program;
     }
@@ -332,8 +343,6 @@
         shaderProgram2D = createProgram("shader-2dbox", "shader-vs");
         shaderProgram2D.zoom2D = gl.getUniformLocation(shaderProgram2D,
             "zoom2D");
-        shaderProgram2D.sliceLocation = gl.getUniformLocation(shaderProgram2D,
-            "sliceLocation");
 
         shaderProgram3D = createProgram("shader-3dbox", "shader-vs");
         shaderProgram3D.cameraPos = gl.getUniformLocation(shaderProgram3D,
@@ -413,6 +422,7 @@
         gl.uniform3f(shaderProgram3D.cameraLook, -x, -y, -z);
         gl.uniform3f(shaderProgram3D.cameraUp, 0, 1.0, 0);
         gl.uniform1f(shaderProgram3D.paramScale, scaleFactor);
+        gl.uniform1f(shaderProgram3D.sliceLocation, sliceLocation);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
         gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
