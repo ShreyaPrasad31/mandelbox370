@@ -381,7 +381,22 @@
         lastMouseX = newX
         lastMouseY = newY;
 
-        drawScene3D();
+        drawScene();
+    }
+
+    function handleMouseWheel(event) {
+        rolled = 0;
+        var rolled = 0;
+        if ('wheelDelta' in event)
+            rolled = event.wheelDelta;
+        else 
+            // Firefox, measurement units of the detail and wheelDelta 
+            //properties are different.
+            rolled = -40 * event.detail;
+
+        distance *= Math.pow(0.9, rolled / 120);
+        
+        drawScene();
     }
 
     function webGLStart() {
@@ -396,6 +411,19 @@
         canvas.onmousedown = handleMouseDown;
         document.onmouseup = handleMouseUp;
         document.onmousemove = handleMouseMove;
+
+         if (canvas.addEventListener) {    
+            // all browsers except IE before version 9
+            // Internet Explorer, Opera, Google Chrome and Safari
+            canvas.addEventListener ("mousewheel", handleMouseWheel, false);
+            // Firefox
+            canvas.addEventListener ("DOMMouseScroll", handleMouseWheel, false);
+        }
+        else {
+            if (canvas.attachEvent) { // IE before version 9
+                canvas.attachEvent ("onmousewheel", handleMouseWheel);
+            }
+        }
 
         drawScene();
     }
