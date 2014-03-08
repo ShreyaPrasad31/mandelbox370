@@ -122,14 +122,15 @@
     const int MAX_ITERS = 15;
 
     uniform float scaleFactor;
+    uniform float zoom2D;
     
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
 
     void main(void) {
         int iterations = 0;
-        vec2 c = v_texCoord * 13.0;
-        vec2 v = v_texCoord * 13.0;
+        vec2 c = (v_texCoord - 0.5) * zoom2D;
+        vec2 v = (v_texCoord - 0.5) * zoom2D;
         for (int i = 0; i < MAX_ITERS; i++) {
             // Box fold
             v = clamp(v, -1.0, 1.0) * 2.0 - v;
@@ -201,7 +202,8 @@
     var view2DxPos   = 600;
 
     // For mouse input
-    var mouseDown = false;
+    var mouseDown2dView = false;
+    var mouseDown3dView = false;
     var lastMouseX = null;
     var lastMouseY = null;
 
@@ -210,6 +212,7 @@
     var phi = Math.PI / 4;
     var anchor = [0, 0, 0];
     var distance = 15;
+    var zoom2D = 1.0;
 
     // Mandelbox parameters
     var scaleFactor = 3.0;
@@ -308,6 +311,9 @@
 
     function initShaders() {
         shaderProgram2D = createProgram("shader-2dbox", "shader-vs");
+        shaderProgram2D.zoom2D = gl.getUniformLocation(shaderProgram2D,
+            "zoom2D");
+
         shaderProgram3D = createProgram("shader-3dbox", "shader-vs");
         shaderProgram3D.cameraPos = gl.getUniformLocation(shaderProgram3D,
             "cameraPos");
@@ -321,8 +327,8 @@
         renderview2DBuffer = gl.createBuffer();
         vertices = [view2DxPos, 0, 
                     view2DxPos, view2DHeight, 
-                    view2DxPos + view2DWidth, view2DHeight,
-                    view2DxPos, 0, 
+                    view2DxPos + view2DWidth, 0,
+                    view2DxPos, view2DHeight, 
                     view2DxPos + view2DWidth, view2DHeight, 
                     view2DxPos + view2DWidth, 0]
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
@@ -355,6 +361,7 @@
         gl.uniform2f(shaderProgram2D.resolutionUniform, 
             gl.viewportWidth, gl.viewportHeight);
         gl.uniform1f(shaderProgram2D.paramScale, scaleFactor);
+        gl.uniform1f(shaderProgram2D.zoom2D, zoom2D);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
         gl.vertexAttribPointer(shaderProgram2D.vertexPositionAttribute, 
@@ -402,32 +409,45 @@
         drawScene3D();
     }
 
+    function isIn3DviewArea(x, y) {
+        return x < view3DWidth;
+    }
+
+    function isIn2DviewArea(x, y) {
+        return x > view2DxPos && y > gl.viewportHeight - view2DHeight;
+    }
+
     function handleMouseDown(event) {
-        mouseDown = true;
+        if (isIn2DviewArea(event.clientX, event.clientY))
+            mouseDown2dView = true;
+        else if (isIn3DviewArea(event.clientX, event.clientY))
+            mouseDown3dView = true;
+
         lastMouseX = event.clientX;
         lastMouseY = event.clientY;
     }
 
     function handleMouseUp(event) {
-        mouseDown = false;
+        mouseDown2dView = false;
+        mouseDown3dView = false;
     }
 
     function handleMouseMove(event) {
-        if (!mouseDown) {
+        if (mouseDown2dView) {
             return;
+        } else if (mouseDown3dView) {
+            var newX = event.clientX;
+            var newY = event.clientY;
+
+            theta += -(newX - lastMouseX) / gl.viewportWidth * 4;
+            phi += -(newY - lastMouseY) / gl.viewportHeight * 4;
+            
+            // Restriction of phi.
+            phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi));
+
+            lastMouseX = newX
+            lastMouseY = newY;
         }
-
-        var newX = event.clientX;
-        var newY = event.clientY;
-
-        theta += -(newX - lastMouseX) / gl.viewportWidth * 4;
-        phi += -(newY - lastMouseY) / gl.viewportHeight * 4;
-        
-        // Restriction of phi.
-        phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi));
-
-        lastMouseX = newX
-        lastMouseY = newY;
 
         drawScene();
     }
@@ -442,7 +462,13 @@
             //properties are different.
             rolled = -40 * event.detail;
 
-        distance *= Math.pow(0.9, rolled / 120);
+        if (isIn2DviewArea(event.clientX, event.clientY)) {
+            zoom2D *= Math.pow(0.9, rolled / 120);
+        }
+        else if (isIn3DviewArea(event.clientX, event.clientY)) {
+            distance *= Math.pow(0.9, rolled / 120);
+        }
+        
 
         drawScene();
     }
