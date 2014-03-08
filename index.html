@@ -123,20 +123,23 @@
 
     uniform float scaleFactor;
     uniform float zoom2D;
+    uniform float sliceLocation;
     
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
 
     void main(void) {
         int iterations = 0;
-        vec2 c = (v_texCoord - 0.5) * zoom2D;
-        vec2 v = (v_texCoord - 0.5) * zoom2D;
+        vec3 c = vec3((v_texCoord.x - 0.5) * zoom2D,
+                      (v_texCoord.y - 0.5) * zoom2D,
+                      sliceLocation);
+        vec3 v = c;
         for (int i = 0; i < MAX_ITERS; i++) {
             // Box fold
             v = clamp(v, -1.0, 1.0) * 2.0 - v;
 
             // Sphere fold.
-            float mag = v.x * v.x + v.y * v.y;
+            float mag = dot(v, v);
             if (mag < 0.25)
                 v = v * 4.0;
             else if (mag < 1.0)
@@ -144,7 +147,7 @@
 
             v = scaleFactor * v + c;
 
-            if (v.x * v.x > 56.0 || v.y * v.y > 56.0)
+            if (v.x * v.x > 56.0 || v.y * v.y > 56.0 || v.z * v.z > 56.0)
                 break;
 
             iterations++;
@@ -216,21 +219,37 @@
 
     // Mandelbox parameters
     var scaleFactor = 3.0;
+    var sliceLocation = 0.0;
 
     // JQuery stuff
     $(function() {
-        $( "#slider" ).slider({
+        $( "#slider-scale" ).slider({
             min: -5,
             max: 6,
             value: 3,
             step: 0.01,
             slide: function( event, ui ) {
-                $( "#slider-scale" ).val( ui.value );
+                $( "#slider-scale-indicator" ).val( ui.value );
                 scaleFactor = ui.value;
                 drawScene();
             }
         });
-        $( "#slider-scale" ).val( $( "#slider" ).slider( "value" ) );
+        $( "#slider-scale-indicator" ).val( 
+            $( "#slider-scale" ).slider( "value" ) );
+
+        $( "#slider-slice" ).slider({
+            min: -3,
+            max: 3,
+            value: 0,
+            step: 0.01,
+            slide: function( event, ui ) {
+                $( "#slider-slice-indicator" ).val( ui.value );
+                sliceLocation = ui.value;
+                drawScene();
+            }
+        });
+        $( "#slider-slice-indicator" ).val( 
+            $( "#slider-slice" ).slider( "value" ) );
     });
 
     function initGL(canvas) {
@@ -313,6 +332,8 @@
         shaderProgram2D = createProgram("shader-2dbox", "shader-vs");
         shaderProgram2D.zoom2D = gl.getUniformLocation(shaderProgram2D,
             "zoom2D");
+        shaderProgram2D.sliceLocation = gl.getUniformLocation(shaderProgram2D,
+            "sliceLocation");
 
         shaderProgram3D = createProgram("shader-3dbox", "shader-vs");
         shaderProgram3D.cameraPos = gl.getUniformLocation(shaderProgram3D,
@@ -358,11 +379,14 @@
     function drawScene2D() {
         gl.useProgram(shaderProgram2D);
 
+        // Pass in parameters.
         gl.uniform2f(shaderProgram2D.resolutionUniform, 
             gl.viewportWidth, gl.viewportHeight);
         gl.uniform1f(shaderProgram2D.paramScale, scaleFactor);
         gl.uniform1f(shaderProgram2D.zoom2D, zoom2D);
+        gl.uniform1f(shaderProgram2D.sliceLocation, sliceLocation);
 
+        // Assign geometry.
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
         gl.vertexAttribPointer(shaderProgram2D.vertexPositionAttribute, 
             2, gl.FLOAT, false, 0, 0);
@@ -370,8 +394,8 @@
         gl.vertexAttribPointer(shaderProgram2D.texCoordAttribute, 
             2, gl.FLOAT, false, 0, 0);
 
+        // Draw
         gl.drawArrays(gl.TRIANGLES, 0, renderview2DBuffer.numItems);
-
     }
 
     function drawScene3D() {
@@ -512,9 +536,12 @@
     <div id="canvas-wrap">
         <canvas id="mandelbox-canvas" style="border: none;" width="900" height="600"></canvas>
         <div id="overlay">
-            <label for="slider-scale">Scale Factor</label>
-            <input type="text" id="slider-scale" style="border:0; color:#f6931f; font-weight:bold;">
-            <div id="slider"></div>
+            <label for="slider-scale-indicator">Scale Factor</label>
+            <input type="text" id="slider-scale-indicator" style="border:0; color:#f6931f; font-weight:bold;">
+            <div id="slider-scale"></div>
+            <label for="slider-slice-indicator">Slice Location</label>
+            <input type="text" id="slider-slice-indicator" style="border:0; color:#f6931f; font-weight:bold;">
+            <div id="slider-slice"></div>
         </div>
     </div>
 </body>
