@@ -29,6 +29,7 @@
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
 
+    uniform mat4 iterRotation;
     uniform vec3 anchor;
     uniform vec3 cameraPos;
     uniform vec3 cameraLook;
@@ -65,6 +66,8 @@
                 v = v / mag;
                 dr = dr / mag;
             }
+
+            v = (iterRotation * vec4(v, 1.0)).xyz;
 
             v = v * scaleFactor + c;
             dr = dr * abs(scaleFactor) + 1.0;
@@ -150,6 +153,7 @@
 
     const int MAX_ITERS = 30;
 
+    uniform mat4 iterRotation;
     uniform float scaleFactor;
     uniform float zoom2D;
     uniform float sliceLocation;
@@ -181,6 +185,8 @@
                 v = v * 4.0;
             else if (mag < 1.0)
                 v = v / mag;
+
+            v = (iterRotation * vec4(v, 1.0)).xyz;
 
             v = scaleFactor * v + c;
 
@@ -261,6 +267,8 @@
     var sliceLocation = 0.0;
     var maxIterations = 15;
     var accuracy = -4;
+    var iterationRotationTheta = 0;
+    var iterationRotationPhi = 0;
 
     // JQuery stuff
     $(function() {
@@ -319,6 +327,34 @@
         });
         accuracy = Math.pow(10, $( "#slider-accuracy" ).slider( "value" ) )
         $( "#slider-accuracy-indicator" ).val( accuracy.toPrecision(2) );
+
+        $( "#slider-iterTheta" ).slider({
+            min: 0,
+            max: 360,
+            value: 0,
+            step: 1,
+            slide: function( event, ui ) {
+                $( "#slider-iterTheta-indicator" ).val( ui.value );
+                iterationRotationTheta = ui.value;
+                drawScene();
+            }
+        });
+        $( "#slider-iterTheta-indicator" ).val( 
+            $( "#slider-iterTheta" ).slider( "value" ) );
+
+        $( "#slider-iterPhi" ).slider({
+            min: 0,
+            max: 360,
+            value: 0,
+            step: 1,
+            slide: function( event, ui ) {
+                $( "#slider-iterPhi-indicator" ).val( ui.value );
+                iterationRotationPhi = ui.value;
+                drawScene();
+            }
+        });
+        $( "#slider-iterPhi-indicator" ).val( 
+            $( "#slider-iterPhi" ).slider( "value" ) );
     });
 
     function initGL(canvas) {
@@ -395,6 +431,7 @@
         program.paramScale = gl.getUniformLocation(program, "scaleFactor");
         program.maxIterations = gl.getUniformLocation(program, "maxIterations");
         program.sliceLocation = gl.getUniformLocation(program, "sliceLocation");
+        program.iterRotation = gl.getUniformLocation(program, "iterRotation");
 
         return program;
     }
@@ -463,6 +500,12 @@
         gl.uniform1f(shaderProgram2D.sliceLocation, sliceLocation);
         gl.uniform1i(shaderProgram2D.maxIterations, maxIterations);
 
+        // Iteration rotation matrix (for rotated mandelboxes/rotboxes)
+        var rot = mat4.create();
+        mat4.rotateX(rot, rot, iterationRotationTheta / 180 * Math.PI);
+        mat4.rotateY(rot, rot, iterationRotationPhi / 180 * Math.PI);
+        gl.uniformMatrix4fv(shaderProgram2D.iterRotation, false, rot);
+
         // Assign geometry.
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
         gl.vertexAttribPointer(shaderProgram2D.vertexPositionAttribute, 
@@ -497,6 +540,13 @@
         gl.uniform1f(shaderProgram3D.epsilon, accuracy);
         gl.uniform1i(shaderProgram3D.maxIterations, maxIterations);
 
+        // Iteration rotation matrix (for rotated mandelboxes/rotboxes)
+        var rot = mat4.create();
+        mat4.rotateX(rot, rot, iterationRotationTheta / 180 * Math.PI);
+        mat4.rotateY(rot, rot, iterationRotationPhi / 180 * Math.PI);
+        gl.uniformMatrix4fv(shaderProgram3D.iterRotation, false, rot);
+
+        // Assign geometry.
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
         gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
             2, gl.FLOAT, false, 0, 0);
@@ -504,6 +554,7 @@
         gl.vertexAttribPointer(shaderProgram3D.texCoordAttribute, 
             2, gl.FLOAT, false, 0, 0);
 
+        // Draw.
         gl.drawArrays(gl.TRIANGLES, 0, renderview3DBuffer.numItems);
 
     }
@@ -750,6 +801,14 @@
             <label for="slider-accuracy-indicator">Accuracy</label>
             <input type="text" id="slider-accuracy-indicator" style="border:0; color:#f6931f; font-weight:bold;">
             <div id="slider-accuracy"></div>
+
+            <label for="slider-iterTheta-indicator">Iteration Rotation, Theta</label>
+            <input type="text" id="slider-iterTheta-indicator" style="border:0; color:#f6931f; font-weight:bold;">
+            <div id="slider-iterTheta"></div>
+
+            <label for="slider-iterPhi-indicator">Iteration Rotation, Phi</label>
+            <input type="text" id="slider-iterPhi-indicator" style="border:0; color:#f6931f; font-weight:bold;">
+            <div id="slider-iterPhi"></div>
 
             <!-- use with $( "#debuglabel" ).val( something ); -->
             <input type="text" id="debuglabel" style="border:0; color:#f6931f; font-weight:bold;">
