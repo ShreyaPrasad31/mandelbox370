@@ -616,7 +616,7 @@
         drawScene();
     }
 
-    function handleDoubleClick(event) {
+    function handleDoubleClick3D(event) {
         var x = distance * Math.sin(phi) * Math.cos(theta);
         var z = distance * Math.sin(phi) * Math.sin(theta);
         var y = distance * Math.cos(phi);
@@ -662,11 +662,18 @@
             $( "#debuglabel" ).val( anchor3D[0] + " " + anchor3D[1] + " " + anchor3D[2]);
         }
 
+        drawScene();
+    }
+
+    function handleDoubleClick(event) {
+        if (isIn2DviewArea(event.clientX, event.clientY))
+            mouseDown2dView = true;
+        else if (isIn3DviewArea(event.clientX, event.clientY))
+            handleDoubleClick3D(event);
+
         // Sometimes double click leaves the mouse in a "down" state.
         mouseDown2dView = false;
         mouseDown3dView = false;
-
-        drawScene();
     }
 
     function webGLStart() {
@@ -724,6 +731,7 @@
             <input type="text" id="debuglabel" style="border:0; color:#f6931f; font-weight:bold;">
         </div>
     </div>
+    Double-click to change anchor (rotation center).
 </body>
 
 </html>
