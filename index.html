@@ -30,6 +30,7 @@
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
 
+    uniform vec3 anchor;
     uniform vec3 cameraPos;
     uniform vec3 cameraLook;
     uniform vec3 cameraUp;
@@ -84,7 +85,7 @@
             float de = distanceEstimate(rayPos, constant1, constant2);
 
             // sphere
-            //de = length(rayPos) - 0.99;
+            // de = length(rayPos) - 0.99;
 
             distance += de * 0.95;
             stepCount++;
@@ -106,14 +107,15 @@
         vec3 u = normalize(cross(cameraUp, w));
         vec3 v = cross(w, u);
 
-        vec3 rayDir = w + u * (v_texCoord.x - 0.5) +
-                          v * (v_texCoord.y - 0.5);
+        vec2 coord = v_texCoord - 0.5;
+        vec3 rayDir = w + u * coord.x + v * coord.y;
 
         float distance = 0.0;
         int steps = rayMarch(rayDir, distance);
+        vec3 finalRayPos = cameraPos + distance * rayDir;
 
         bool crossedPlane = 
-            (cameraPos.x < sliceLocation) != ((cameraPos + distance * rayDir).x < sliceLocation);
+            (cameraPos.x < sliceLocation) != (finalRayPos.x < sliceLocation);
 
         // Base background color.
         vec4 color = vec4(0.5, 0.3, 0.7, 1.0);
@@ -124,13 +126,22 @@
             color = vec4(vec3(1.0, 1.0, 1.0) * (1.0 - distRatio), 1.0);
         }
 
+        // Draw transparent slicing plane if needed.
         if (crossedPlane)
             color += vec4(-0.1, -0.1, 0.3, 0.0);
 
-        gl_FragColor = color;
+        // Draw anchor if needed.
+        if (length(coord) < 0.01)
+        {
+            if (length(cameraPos - anchor) < distance)
+                // Solid color if in front of fractal.
+                color = vec4(1.0, 0.0, 0.0, 1.0);
+            else
+                // Transparent if behind fractal.
+                color += vec4(0.5, -0.2, -0.2, 0.0);
+        }
 
-        //gl_FragColor = vec4(0.0, rayDir.y+1.0, 1.0, 1.0);
-        //gl_FragColor = vec4(v_texCoord.x, v_texCoord.y, 1.0, 1.0) ;
+        gl_FragColor = color;
     }
 </script>
 
@@ -381,6 +392,8 @@
             "zoom2D");
 
         shaderProgram3D = createProgram("shader-3dbox", "shader-vs");
+        shaderProgram3D.anchor = gl.getUniformLocation(shaderProgram3D,
+            "anchor");
         shaderProgram3D.cameraPos = gl.getUniformLocation(shaderProgram3D,
             "cameraPos");
         shaderProgram3D.cameraLook = gl.getUniformLocation(shaderProgram3D,
@@ -456,9 +469,12 @@
         var z = distance * Math.sin(phi) * Math.sin(theta);
         var y = distance * Math.cos(phi);
         
-        gl.uniform3f(shaderProgram3D.cameraPos, x, y, z);
+        gl.uniform3f(shaderProgram3D.cameraPos, 
+            x + anchor3D[0], y + anchor3D[1], z + anchor3D[2]);
         gl.uniform3f(shaderProgram3D.cameraLook, -x, -y, -z);
         gl.uniform3f(shaderProgram3D.cameraUp, 0, 1.0, 0);
+        gl.uniform3f(shaderProgram3D.anchor, 
+            anchor3D[0], anchor3D[1], anchor3D[2]);
         gl.uniform1f(shaderProgram3D.paramScale, scaleFactor);
         gl.uniform1f(shaderProgram3D.sliceLocation, sliceLocation);
         gl.uniform1i(shaderProgram3D.maxIterations, maxIterations);
@@ -488,6 +504,56 @@
 
     function isIn2DviewArea(x, y) {
         return x > view2DxPos && y > gl.viewportHeight - view2DHeight;
+    }
+
+    function distanceEstimate(rayPos, constant1, constant2) {
+        var c = vec3.clone(rayPos);
+        var v = vec3.clone(rayPos);
+        var dr = 1.0;
+
+        for (var i = 0; i < maxIterations; i++) {
+            var old = vec3.clone(v);
+            vec3.max(v, v, vec3.fromValues(-1.0, -1.0, -1.0));
+            vec3.min(v, v, vec3.fromValues(+1.0, +1.0, +1.0));
+            vec3.scale(v, v, 2.0);
+            vec3.sub(v, v, old);
+
+            var mag = vec3.squaredLength(v);
+            if (mag < 0.25) {
+                vec3.scale(v, v, 4.0);
+                dr = dr * 4.0;
+            } else if (mag < 1.0) {
+                vec3.scale(v, v, 1 / mag);
+                dr = dr / mag;
+            }
+
+            vec3.scaleAndAdd(v, c, v, scaleFactor);
+            dr = dr * Math.abs(scaleFactor) + 1.0;
+        }
+
+        return (vec3.length(v) - constant1) / dr - constant2;
+    }
+
+    function getRayLength(cameraPos, direction) {
+        // Return the length of the ray from the camera position to 
+        // the fractal in a given direction.
+
+        var constant1 = Math.abs(scaleFactor - 1.0);
+        var constant2 = Math.pow(Math.abs(scaleFactor), 1.0 - maxIterations);
+        var distance = 0;
+
+        for (var i = 0; i < 128; i++) {
+            var rayPos = vec3.create();
+            vec3.scaleAndAdd(rayPos, cameraPos, direction, distance);
+            var de = distanceEstimate(rayPos, constant1, constant2);
+
+            distance += de * 0.95;
+
+            if (de < 0.0001 || distance > 50.0)
+                return distance;
+        }
+
+        return distance;
     }
 
     function handleMouseDown(event) {
@@ -550,6 +616,59 @@
         drawScene();
     }
 
+    function handleDoubleClick(event) {
+        var x = distance * Math.sin(phi) * Math.cos(theta);
+        var z = distance * Math.sin(phi) * Math.sin(theta);
+        var y = distance * Math.cos(phi);
+
+        var pos = vec3.create();
+        vec3.add(pos, vec3.fromValues(x, y, z), anchor3D);
+
+        var look = vec3.fromValues(-x, -y, -z);
+        var side = vec3.create();
+        var up = vec3.fromValues(0.0, 1.0, 0.0);
+        vec3.normalize(look, look);
+        vec3.normalize(side, vec3.cross(side, up, look));
+        vec3.cross(up, look, side);
+
+        // Sample the distances to the fractal in a small 3x3 window
+        // around the position of the mouse click.
+        var distances = new Array();
+        for (var dx = -1; dx <= 1; dx++) {
+            for (var dy = -1; dy <= 1; dy++) {
+                var rayDir = vec3.clone(look);
+                vec3.scaleAndAdd(rayDir, rayDir, side, 
+                    (event.clientX + dx) / view3DWidth - 0.5);
+                vec3.scaleAndAdd(rayDir, rayDir, up, 
+                    0.5 - (event.clientY + dy) / view3DHeight);
+
+                distances.push(getRayLength(pos, rayDir));
+            }
+        }
+        distances.sort(function(a,b){return a-b});
+
+        // Take 3rd closest one to be the distance to the new anchor.
+        // We do it this way to average out variation caused by the fractal's
+        // complex shape. We don't actually take the average though, incase
+        // some rays don't hit the fractal.
+        if (distances[2] < 50.0) {
+            var rayDir = vec3.clone(look);
+            vec3.scaleAndAdd(rayDir, rayDir, side, 
+                event.clientX / view3DWidth - 0.5);
+            vec3.scaleAndAdd(rayDir, rayDir, up, 
+                0.5 - event.clientY / view3DHeight);
+            vec3.scaleAndAdd(anchor3D, pos, rayDir, distances[2]);
+
+            $( "#debuglabel" ).val( anchor3D[0] + " " + anchor3D[1] + " " + anchor3D[2]);
+        }
+
+        // Sometimes double click leaves the mouse in a "down" state.
+        mouseDown2dView = false;
+        mouseDown3dView = false;
+
+        drawScene();
+    }
+
     function webGLStart() {
         var canvas = document.getElementById("mandelbox-canvas");
         initGL(canvas);
@@ -562,6 +681,7 @@
         canvas.onmousedown = handleMouseDown;
         document.onmouseup = handleMouseUp;
         document.onmousemove = handleMouseMove;
+        document.ondblclick = handleDoubleClick;
 
          if (canvas.addEventListener) {    
             // all browsers except IE before version 9
@@ -577,6 +697,9 @@
         }
 
         drawScene();
+
+        // Avoid double click selecting text.
+        $("body").disableSelection();
     }
 
 </script>
