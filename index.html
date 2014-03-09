@@ -25,7 +25,6 @@
     const int MAX_ITERS = 30;
     const int MAX_STEPS = 128;
     const float MAX_DIST = 50.0;
-    const float EPSILON = 0.0001;
     
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
@@ -36,6 +35,7 @@
     uniform vec3 cameraUp;
     uniform float scaleFactor;
     uniform float sliceLocation;
+    uniform float epsilon;
     uniform int maxIterations;
 
     float distanceEstimate(vec3 rayPos, float constant1, float constant2)
@@ -90,7 +90,7 @@
             distance += de * 0.95;
             stepCount++;
 
-            if (de < EPSILON)
+            if (de < epsilon)
                 return stepCount;
             else if (distance > MAX_DIST)
                 return 0;
@@ -260,6 +260,7 @@
     var scaleFactor = 3.0;
     var sliceLocation = 0.0;
     var maxIterations = 15;
+    var accuracy = -4;
 
     // JQuery stuff
     $(function() {
@@ -304,6 +305,20 @@
         });
         $( "#slider-iterations-indicator" ).val( 
             $( "#slider-iterations" ).slider( "value" ) );
+
+        $( "#slider-accuracy" ).slider({
+            min: -8,
+            max: -3,
+            value: -4,
+            step: 0.01,
+            slide: function( event, ui ) {
+                accuracy = Math.pow(10, ui.value);
+                $( "#slider-accuracy-indicator" ).val( accuracy.toPrecision(2) );
+                drawScene();
+            }
+        });
+        accuracy = Math.pow(10, $( "#slider-accuracy" ).slider( "value" ) )
+        $( "#slider-accuracy-indicator" ).val( accuracy.toPrecision(2) );
     });
 
     function initGL(canvas) {
@@ -400,6 +415,8 @@
             "cameraLook");
         shaderProgram3D.cameraUp = gl.getUniformLocation(shaderProgram3D,
             "cameraUp");
+        shaderProgram3D.epsilon = gl.getUniformLocation(shaderProgram3D,
+            "epsilon");
     }
 
     function initBuffers() {
@@ -477,6 +494,7 @@
             anchor3D[0], anchor3D[1], anchor3D[2]);
         gl.uniform1f(shaderProgram3D.paramScale, scaleFactor);
         gl.uniform1f(shaderProgram3D.sliceLocation, sliceLocation);
+        gl.uniform1f(shaderProgram3D.epsilon, accuracy);
         gl.uniform1i(shaderProgram3D.maxIterations, maxIterations);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
@@ -549,7 +567,7 @@
 
             distance += de * 0.95;
 
-            if (de < 0.0001 || distance > 50.0)
+            if (de < accuracy || distance > 50.0)
                 return distance;
         }
 
@@ -722,16 +740,25 @@
             <label for="slider-iterations-indicator">Iterations</label>
             <input type="text" id="slider-iterations-indicator" style="border:0; color:#f6931f; font-weight:bold;">
             <div id="slider-iterations"></div>
+
             <label for="slider-scale-indicator">Scale Factor</label>
             <input type="text" id="slider-scale-indicator" style="border:0; color:#f6931f; font-weight:bold;">
             <div id="slider-scale"></div>
+
             <label for="slider-slice-indicator">Slice Location</label>
             <input type="text" id="slider-slice-indicator" style="border:0; color:#f6931f; font-weight:bold;">
             <div id="slider-slice"></div>
+
+            <label for="slider-accuracy-indicator">Accuracy</label>
+            <input type="text" id="slider-accuracy-indicator" style="border:0; color:#f6931f; font-weight:bold;">
+            <div id="slider-accuracy"></div>
+
             <input type="text" id="debuglabel" style="border:0; color:#f6931f; font-weight:bold;">
         </div>
     </div>
     Double-click to change anchor (rotation center).
+    </br>
+    Adjusting the accuracy will make the image darker, until you zoom in more (the more detailed the fractal, the more light it will trap).
 </body>
 
 </html>
