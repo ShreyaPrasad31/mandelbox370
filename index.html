@@ -21,7 +21,7 @@
 
 <script id="shader-3dbox" type="x-shader/x-fragment">
     precision mediump float;
-    const int MAX_ITERS = 15;
+    const int MAX_ITERS = 30;
     const int MAX_STEPS = 128;
     const float MAX_DIST = 50.0;
     const float EPSILON = 0.0001;
@@ -34,6 +34,7 @@
     uniform vec3 cameraUp;
     uniform float scaleFactor;
     uniform float sliceLocation;
+    uniform int maxIterations;
 
     float distanceEstimate(vec3 rayPos, float constant1, float constant2)
     {
@@ -43,6 +44,10 @@
 
         for (int i = 0; i < MAX_ITERS; i++)
         {
+            // GLSL doesn't support variable loop indices...
+            if (i == maxIterations)
+                break;
+
             // Box fold
             v = clamp(v, -1.0, 1.0) * 2.0 - v;
 
@@ -70,7 +75,7 @@
         int stepCount = 0;
 
         float constant1 = abs(scaleFactor - 1.0);
-        float constant2 = pow(float(abs(scaleFactor)), float(1 - MAX_ITERS));
+        float constant2 = pow(float(abs(scaleFactor)), float(1 - maxIterations));
 
         for (int i = 0; i < MAX_STEPS; i++)
         {
@@ -92,7 +97,8 @@
         return MAX_STEPS;
     }
 
-    void main(void) {
+    void main(void) 
+    {
         // Calculate the unit vector representing the direction
         // from the camera to pixel (x, y) on the projection plane.
         vec3 w = normalize(cameraLook);
@@ -129,22 +135,30 @@
 
 <script id="shader-2dbox" type="x-shader/x-fragment">
     precision mediump float;
-    const int MAX_ITERS = 15;
+
+    const int MAX_ITERS = 30;
 
     uniform float scaleFactor;
     uniform float zoom2D;
     uniform float sliceLocation;
+    uniform int maxIterations;
     
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
 
-    void main(void) {
+    void main(void) 
+    {
         int iterations = 0;
         vec3 c = vec3((v_texCoord.x - 0.5) * zoom2D,
                       (v_texCoord.y - 0.5) * zoom2D,
                       sliceLocation);
         vec3 v = c;
-        for (int i = 0; i < MAX_ITERS; i++) {
+        for (int i = 0; i < MAX_ITERS; i++) 
+        {
+            // GLSL doesn't support variable loop indices...
+            if (i == maxIterations)
+                break;
+
             // Box fold
             v = clamp(v, -1.0, 1.0) * 2.0 - v;
 
@@ -163,7 +177,7 @@
             iterations++;
         }
 
-        if (iterations == MAX_ITERS)
+        if (iterations == maxIterations)
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         else
             gl_FragColor = vec4(vec3(
@@ -181,7 +195,8 @@
     attribute vec2 texCoord;
     varying vec2 v_texCoord;
 
-    void main(void) {
+    void main(void) 
+    {
         // Convert pi xels coordinates to range [0, 1]
         vec2 zeroToOne = position / resolution;
      
@@ -230,6 +245,7 @@
     // Mandelbox parameters
     var scaleFactor = 3.0;
     var sliceLocation = 0.0;
+    var maxIterations = 15;
 
     // JQuery stuff
     $(function() {
@@ -260,6 +276,20 @@
         });
         $( "#slider-slice-indicator" ).val( 
             $( "#slider-slice" ).slider( "value" ) );
+
+        $( "#slider-iterations" ).slider({
+            min: 1,
+            max: 30,
+            value: 15,
+            step: 1,
+            slide: function( event, ui ) {
+                $( "#slider-iterations-indicator" ).val( ui.value );
+                maxIterations = ui.value;
+                drawScene();
+            }
+        });
+        $( "#slider-iterations-indicator" ).val( 
+            $( "#slider-iterations" ).slider( "value" ) );
     });
 
     function initGL(canvas) {
@@ -334,6 +364,7 @@
             gl.getUniformLocation(program, "resolution");
 
         program.paramScale = gl.getUniformLocation(program, "scaleFactor");
+        program.maxIterations = gl.getUniformLocation(program, "maxIterations");
         program.sliceLocation = gl.getUniformLocation(program, "sliceLocation");
 
         return program;
@@ -394,6 +425,7 @@
         gl.uniform1f(shaderProgram2D.paramScale, scaleFactor);
         gl.uniform1f(shaderProgram2D.zoom2D, zoom2D);
         gl.uniform1f(shaderProgram2D.sliceLocation, sliceLocation);
+        gl.uniform1i(shaderProgram2D.maxIterations, maxIterations);
 
         // Assign geometry.
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
@@ -423,6 +455,7 @@
         gl.uniform3f(shaderProgram3D.cameraUp, 0, 1.0, 0);
         gl.uniform1f(shaderProgram3D.paramScale, scaleFactor);
         gl.uniform1f(shaderProgram3D.sliceLocation, sliceLocation);
+        gl.uniform1i(shaderProgram3D.maxIterations, maxIterations);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
         gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
@@ -546,6 +579,9 @@
     <div id="canvas-wrap">
         <canvas id="mandelbox-canvas" style="border: none;" width="900" height="600"></canvas>
         <div id="overlay">
+            <label for="slider-iterations-indicator">Iterations</label>
+            <input type="text" id="slider-iterations-indicator" style="border:0; color:#f6931f; font-weight:bold;">
+            <div id="slider-iterations"></div>
             <label for="slider-scale-indicator">Scale Factor</label>
             <input type="text" id="slider-scale-indicator" style="border:0; color:#f6931f; font-weight:bold;">
             <div id="slider-scale"></div>
