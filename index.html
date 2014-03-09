@@ -676,8 +676,6 @@
             vec3.scaleAndAdd(rayDir, rayDir, up, 
                 0.5 - event.clientY / view3DHeight);
             vec3.scaleAndAdd(anchor3D, pos, rayDir, distances[2]);
-
-            $( "#debuglabel" ).val( anchor3D[0] + " " + anchor3D[1] + " " + anchor3D[2]);
         }
 
         drawScene();
@@ -753,6 +751,7 @@
             <input type="text" id="slider-accuracy-indicator" style="border:0; color:#f6931f; font-weight:bold;">
             <div id="slider-accuracy"></div>
 
+            <!-- use with $( "#debuglabel" ).val( something ); -->
             <input type="text" id="debuglabel" style="border:0; color:#f6931f; font-weight:bold;">
         </div>
     </div>
