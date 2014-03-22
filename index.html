@@ -192,13 +192,24 @@
         }
 
         if (iterations == maxIterations)
+        {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        }
+        else if (iterations == 0)
+        {
+            if (mod(floor(c.x) + floor(c.y), 2.0) < 1.0)
+                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            else
+                gl_FragColor = vec4(0.8, 0.8, 0.8, 1.0);
+        }
         else
+        {
             gl_FragColor = vec4(vec3(
                 0.8 + 0.3 * sin(float(iterations) * 0.7),
                 0.8 + 0.3 * sin(float(iterations) * 0.9),
                 0.8 + 0.3 * sin(float(iterations) * 0.5)),
                 1.0);
+        }
     }
 </script>
 
@@ -785,8 +796,10 @@
         </div>
     </div>
     Double-click to change anchor (rotation center).
-    </br>
+    <br/>
     Adjusting the accuracy will make the image darker, until you zoom in more (the more detailed the fractal, the more light it will trap).
+    <br/>
+    The checkboard has tiles of size 1, which gives a reference point for the size of the Mandelbox.
 </body>
 
 </html>
