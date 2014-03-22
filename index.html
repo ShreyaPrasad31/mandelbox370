@@ -37,6 +37,7 @@
     uniform float sliceLocation;
     uniform float epsilon;
     uniform int maxIterations;
+    uniform bool viewSlicingPlane;
 
     float distanceEstimate(vec3 rayPos, float constant1, float constant2)
     {
@@ -127,7 +128,7 @@
         }
 
         // Draw transparent slicing plane if needed.
-        if (crossedPlane)
+        if (crossedPlane && viewSlicingPlane)
             color += vec4(-0.1, -0.1, 0.3, 0.0);
 
         // Draw anchor if needed.
@@ -242,6 +243,10 @@
     var view2DHeight = 300;
     var view2DxPos   = 600;
 
+    // UI Controls
+    var checkboxJuliabox;
+    var checkboxSlicer;
+
     // For mouse input
     var mouseDown2dView = false;
     var mouseDown3dView = false;
@@ -261,6 +266,7 @@
     var sliceLocation = 0.0;
     var maxIterations = 15;
     var accuracy = -4;
+    var viewSlicingPlane = true;
 
     // JQuery stuff
     $(function() {
@@ -417,6 +423,8 @@
             "cameraUp");
         shaderProgram3D.epsilon = gl.getUniformLocation(shaderProgram3D,
             "epsilon");
+        shaderProgram3D.viewSlicingPlane = gl.getUniformLocation(shaderProgram3D,
+            "viewSlicingPlane");
     }
 
     function initBuffers() {
@@ -496,6 +504,7 @@
         gl.uniform1f(shaderProgram3D.sliceLocation, sliceLocation);
         gl.uniform1f(shaderProgram3D.epsilon, accuracy);
         gl.uniform1i(shaderProgram3D.maxIterations, maxIterations);
+        gl.uniform1i(shaderProgram3D.viewSlicingPlane, viewSlicingPlane);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
         gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
@@ -692,6 +701,16 @@
         mouseDown3dView = false;
     }
 
+    function handleCheckboxClickJuliaBox(event) {
+        
+        drawScene();
+    }
+
+    function handleCheckboxClickSlicer(event) {
+        viewSlicingPlane = checkboxSlicer.checked;
+        drawScene();
+    }
+
     function webGLStart() {
         var canvas = document.getElementById("mandelbox-canvas");
         initGL(canvas);
@@ -720,6 +739,11 @@
         }
 
         drawScene();
+
+        checkboxJuliabox = document.getElementById("toggle-juliabox");
+        checkboxSlicer = document.getElementById("toggle-slicer");
+        checkboxJuliabox.onclick = handleCheckboxClickJuliaBox;
+        checkboxSlicer.onclick = handleCheckboxClickSlicer;
 
         // Avoid double click selecting text.
         $("body").disableSelection();
@@ -750,6 +774,11 @@
             <label for="slider-accuracy-indicator">Accuracy</label>
             <input type="text" id="slider-accuracy-indicator" style="border:0; color:#f6931f; font-weight:bold;">
             <div id="slider-accuracy"></div>
+
+            <br/>
+
+            <input type="checkbox" id="toggle-juliabox"><label for="toggle-juliabox">View Juliabox</label>
+            <input type="checkbox" id="toggle-slicer" checked><label for="toggle-slicer">View Slicing Plane</label>
 
             <!-- use with $( "#debuglabel" ).val( something ); -->
             <input type="text" id="debuglabel" style="border:0; color:#f6931f; font-weight:bold;">
