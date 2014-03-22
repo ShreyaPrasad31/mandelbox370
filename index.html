@@ -126,7 +126,13 @@
 
         if (steps > 0)
         {
-            float distRatio = float(steps) / float(MAX_STEPS) * 0.7;
+            // The (log(epsilon) * 2.0) offset is to compensate for the fact
+            // that more steps are taken when epsilon is small.
+            float adjusted = max(0.0, float(steps) + log(epsilon) * 2.0);
+            float adjustedMax = float(MAX_STEPS) + log(epsilon) * 2.0;
+
+            // Sqrt increases contrast.
+            float distRatio = sqrt(adjusted / adjustedMax) * 0.8;
             color = vec4(vec3(1.0, 1.0, 1.0) * (1.0 - distRatio), 1.0);
         }
 
