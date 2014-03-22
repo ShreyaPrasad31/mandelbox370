@@ -709,8 +709,9 @@
             vec3.scaleAndAdd(rayDir, rayDir, side, 
                 event.clientX / view3DWidth - 0.5);
             vec3.scaleAndAdd(rayDir, rayDir, up, 
-                0.5 - event.clientY / view3DHeight);
+                0.5 - event.clientY / view3DHeight); 
             vec3.scaleAndAdd(anchor3D, pos, rayDir, distances[2]);
+            distance = distances[2];
         }
 
         drawScene();
