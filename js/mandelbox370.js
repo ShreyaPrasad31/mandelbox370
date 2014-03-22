@@ -26,7 +26,7 @@ var view2DHeight = 300;
 var view2DxPos   = 600;
 var view2DyPos   = 300;
 var highResFramebufferSize = 1024;
-var lowResFramebufferSize = 512;
+var lowResFramebufferSize = 256;
 var highResTimeout;
 var highResMode = false;
 
@@ -289,14 +289,14 @@ function initBuffers() {
     renderview3DBuffer = createRectangleBuffer(0, 0, view3DWidth, view3DHeight);
     texCoordBuffer = createRectangleBuffer(0, 0, 1.0, 1.0);
     texCoord3DLowBuffer = createRectangleBuffer(0, 0, 
-        view3DWidth / 2.0 / lowResFramebufferSize, 
-        view3DHeight / 2.0 / lowResFramebufferSize);
+        view3DWidth / 3.0 / lowResFramebufferSize, 
+        view3DHeight / 3.0 / lowResFramebufferSize);
     texCoord3DHighBuffer = createRectangleBuffer(0, 0, 
         view3DWidth / highResFramebufferSize, 
         view3DHeight / highResFramebufferSize);
 
     render3DLowBuffer = createRectangleBuffer(0, 0, 
-        view3DWidth / 2.0, view3DHeight / 2.0);
+        view3DWidth / 3.0, view3DHeight / 3.0);
     framebufferLow = createFrameBuffer(
         lowResFramebufferSize, lowResFramebufferSize);
     texture3DLow = createTexture(framebufferLow);
