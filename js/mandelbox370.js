@@ -2,10 +2,21 @@ var canvas;
 var gl;
 var shaderProgram2D;
 var shaderProgram3D;
+var shaderProgramTexture;
 
 var renderview2DBuffer;
 var renderview3DBuffer;
+var render3DHighBuffer;
+var render3DLowBuffer;
+
 var texCoordBuffer;
+var texCoord3DHighBuffer;
+var texCoord3DLowBuffer;
+
+var framebufferLow;
+var framebufferHigh;
+var textureLow;
+var textureHigh;
 
 // UI
 var view3DWidth  = 600;
@@ -14,6 +25,10 @@ var view2DWidth  = 300;
 var view2DHeight = 300;
 var view2DxPos   = 600;
 var view2DyPos   = 300;
+var highResFramebufferSize = 1024;
+var lowResFramebufferSize = 512;
+var highResTimeout;
+var highResMode = false;
 
 // UI Controls
 var checkboxJuliabox;
@@ -42,6 +57,7 @@ var accuracy = -4;
 var viewSlicingPlane = true;
 var viewJuliabox = false;
 var juliaboxConstant = vec3.fromValues(0, 0, 0);
+var isDirty3D = true;
 
 // JQuery stuff
 $(function() {
@@ -63,7 +79,7 @@ $(function() {
             $('#slider-slice').slider( "option", "min", -escapeDistance);
             $('#slider-slice').slider( "option", "max", +escapeDistance);
 
-            drawScene();
+            updateSceneAll();
         }
     });
     $( "#slider-scale-indicator" ).val( 
@@ -78,7 +94,7 @@ $(function() {
             $( "#slider-slice-indicator" ).val( ui.value );
             sliceLocation = ui.value;
             juliaboxConstant[2] = sliceLocation;
-            drawScene();
+            updateSceneAll();
         }
     });
     $( "#slider-slice-indicator" ).val( 
@@ -92,7 +108,7 @@ $(function() {
         slide: function( event, ui ) {
             $( "#slider-iterations-indicator" ).val( ui.value );
             maxIterations = ui.value;
-            drawScene();
+            updateSceneAll();
         }
     });
     $( "#slider-iterations-indicator" ).val( 
@@ -106,7 +122,7 @@ $(function() {
         slide: function( event, ui ) {
             accuracy = Math.pow(10, ui.value);
             $( "#slider-accuracy-indicator" ).val( accuracy.toPrecision(2) );
-            drawScene();
+            updateScene3D();
         }
     });
     accuracy = Math.pow(10, $( "#slider-accuracy" ).slider( "value" ) )
@@ -193,7 +209,57 @@ function createProgram(fragmentShaderID, vertexShaderID) {
     return program;
 }
 
+function createFrameBuffer(width, height) {
+    var frameBuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+    frameBuffer.width = width;
+    frameBuffer.height = height;
+
+    // Depth buffer
+    frameBuffer.renderbuffer = gl.createRenderbuffer();
+    gl.bindRenderbuffer(gl.RENDERBUFFER, frameBuffer.renderbuffer);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16,
+        frameBuffer.width, frameBuffer.height);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT,
+        gl.RENDERBUFFER, frameBuffer.renderbuffer);
+
+    return frameBuffer;
+}
+
+function createTexture(frameBuffer) {
+    var texture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, frameBuffer.width, 
+        frameBuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+        gl.TEXTURE_2D, texture, 0);
+
+    return texture;   
+}
+
+function createRectangleBuffer(x, y, width, height) {
+    buffer = gl.createBuffer();
+    vertices = [x, y, 
+                x, y + height, 
+                x + width, y,
+                x, y + height, 
+                x + width, y + height, 
+                x + width, y]
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    buffer.itemSize = 2;
+    buffer.numItems = 6;
+    return buffer;
+}
+
 function initShaders() {
+    shaderProgramTexture = createProgram("shader-fs-display", "shader-vs");
+    shaderProgramTexture.sampler = gl.getUniformLocation(shaderProgramTexture,
+        "sampler");
+
     shaderProgram2D = createProgram("shader-2dbox", "shader-vs");
     shaderProgram2D.center = gl.getUniformLocation(shaderProgram2D,
         "center");
@@ -218,35 +284,33 @@ function initShaders() {
 }
 
 function initBuffers() {
-    renderview2DBuffer = gl.createBuffer();
-    vertices = [view2DxPos, 0, 
-                view2DxPos, view2DHeight, 
-                view2DxPos + view2DWidth, 0,
-                view2DxPos, view2DHeight, 
-                view2DxPos + view2DWidth, view2DHeight, 
-                view2DxPos + view2DWidth, 0]
-    gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    renderview2DBuffer.itemSize = 2;
-    renderview2DBuffer.numItems = 6;
+    renderview2DBuffer = createRectangleBuffer(view2DxPos, 0, 
+        view2DWidth, view2DHeight);
+    renderview3DBuffer = createRectangleBuffer(0, 0, view3DWidth, view3DHeight);
+    texCoordBuffer = createRectangleBuffer(0, 0, 1.0, 1.0);
+    texCoord3DLowBuffer = createRectangleBuffer(0, 0, 
+        view3DWidth / 2.0 / lowResFramebufferSize, 
+        view3DHeight / 2.0 / lowResFramebufferSize);
+    texCoord3DHighBuffer = createRectangleBuffer(0, 0, 
+        view3DWidth / highResFramebufferSize, 
+        view3DHeight / highResFramebufferSize);
 
-    renderview3DBuffer = gl.createBuffer();
-    vertices = [0, 0, 
-                0, view3DHeight, 
-                view3DWidth, 0,
-                0, view3DHeight, 
-                view3DWidth, view3DHeight, 
-                view3DWidth, 0]
-    gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    renderview3DBuffer.itemSize = 2;
-    renderview3DBuffer.numItems = 6;
+    render3DLowBuffer = createRectangleBuffer(0, 0, 
+        view3DWidth / 2.0, view3DHeight / 2.0);
+    framebufferLow = createFrameBuffer(
+        lowResFramebufferSize, lowResFramebufferSize);
+    texture3DLow = createTexture(framebufferLow);
 
-    texCoordBuffer = gl.createBuffer();
-    vertices = [ 0.0, 0.0, 0.0, 1.0, 1.0, 0.0,
-                 0.0, 1.0, 1.0, 1.0, 1.0, 0.0]
-    gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    render3DHighBuffer = createRectangleBuffer(0, 0,
+        view3DWidth, view3DHeight);
+    framebufferHigh = createFrameBuffer(
+        highResFramebufferSize, highResFramebufferSize);
+    texture3DHigh = createTexture(framebufferHigh);
+
+    // Reset to default bindings.
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 function drawScene2D() {
@@ -277,7 +341,7 @@ function drawScene2D() {
     gl.drawArrays(gl.TRIANGLES, 0, renderview2DBuffer.numItems);
 }
 
-function drawScene3D() {
+function drawScene3D(rectBuffer) {
     gl.useProgram(shaderProgram3D);
 
     gl.uniform2f(shaderProgram3D.resolutionUniform, 
@@ -303,15 +367,51 @@ function drawScene3D() {
     gl.uniform1i(shaderProgram3D.viewSlicingPlane, viewSlicingPlane);
     gl.uniform1i(shaderProgram3D.juliaboxMode, viewJuliabox);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, rectBuffer);
     gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
         2, gl.FLOAT, false, 0, 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
     gl.vertexAttribPointer(shaderProgram3D.texCoordAttribute, 
         2, gl.FLOAT, false, 0, 0);
 
-    gl.drawArrays(gl.TRIANGLES, 0, renderview3DBuffer.numItems);
+    gl.drawArrays(gl.TRIANGLES, 0, rectBuffer.numItems);
 
+}
+
+function displayScene3D(texture, texBuffer) {
+    gl.useProgram(shaderProgramTexture);
+
+    gl.uniform2f(shaderProgramTexture.resolutionUniform, 
+        gl.viewportWidth, gl.viewportHeight);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
+    gl.vertexAttribPointer(shaderProgramTexture.vertexPositionAttribute, 
+        2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, texBuffer);
+    gl.vertexAttribPointer(shaderProgramTexture.texCoordAttribute, 
+        2, gl.FLOAT, false, 0, 0);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.uniform1i(shaderProgramTexture.sampler, 0);
+
+    gl.drawArrays(gl.TRIANGLES, 0, renderview3DBuffer.numItems);
+}
+
+function updateSceneAll() {
+    isDirty3D = true;
+    highResMode = false;
+    drawScene();
+}
+
+function updateScene2D() {
+    drawScene();
+}
+
+function updateScene3D() {
+    isDirty3D = true;
+    highResMode = false;
+    drawScene();
 }
 
 var lastFrameTime = new Date().getTime();
@@ -322,12 +422,44 @@ function drawScene() {
 
     // Smooth out the timing measures.
     time = time * 0.9 + (new Date().getTime() - lastFrameTime) * 0.1;
-    // $( "#debuglabel" ).val( time );
+    $( "#debuglabel" ).val( time );
 
     drawScene2D();
-    drawScene3D();
+
+    if (isDirty3D) {
+        clearTimeout(highResTimeout);
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebufferLow);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        drawScene3D(render3DLowBuffer);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        highResTimeout = setTimeout(function() { 
+            renderSceneHighRes();
+            highResMode = true;
+            drawScene(); }, 
+            500);
+        isDirty3D = false;
+    }
+
+    if (highResMode) {
+        displayScene3D(texture3DHigh, texCoord3DHighBuffer);
+    } else {
+        displayScene3D(texture3DLow, texCoord3DLowBuffer);
+    }
 
     lastFrameTime = new Date().getTime();
+}
+
+function renderSceneHighRes() {
+    highResMode = true;
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebufferHigh);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    drawScene3D(render3DHighBuffer);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 function isIn3DviewArea(x, y) {
@@ -437,6 +569,8 @@ function handleMouseMove(event) {
             diff = vec2.scale(diff, diff, zoom2D / view2DWidth);
             anchor2D = vec2.add(anchor2D, anchor2D, diff);
         }
+
+        updateScene2D();
     } else if (mouseDown3dView) {
 
         theta += -(newX - lastMouseX) / gl.viewportWidth * 4;
@@ -445,12 +579,11 @@ function handleMouseMove(event) {
         // Restriction of phi.
         phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi));
 
+        updateScene3D();
     }
 
     lastMouseX = newX
     lastMouseY = newY;
-
-    drawScene();
 }
 
 function handleMouseWheel(event) {
@@ -466,13 +599,12 @@ function handleMouseWheel(event) {
     var mousePos = getMousePos(event);
     if (isIn2DviewArea(mousePos.x, mousePos.y)) {
         zoom2D *= Math.pow(0.9, rolled / 120);
+        updateScene2D();
     }
     else if (isIn3DviewArea(mousePos.x, mousePos.y)) {
         distance *= Math.pow(0.9, rolled / 120);
+        updateScene3D();
     }
-    
-
-    drawScene();
 }
 
 function handleDoubleClick3D(event) {
@@ -522,7 +654,7 @@ function handleDoubleClick3D(event) {
         distance = distances[2];
     }
 
-    drawScene();
+    updateScene3D();
 }
 
 function handleDoubleClick(event) {
@@ -539,12 +671,12 @@ function handleDoubleClick(event) {
 
 function handleCheckboxClickJuliaBox(event) {
     viewJuliabox = checkboxJuliabox.checked;
-    drawScene();
+    updateSceneAll();
 }
 
 function handleCheckboxClickSlicer(event) {
     viewSlicingPlane = checkboxSlicer.checked;
-    drawScene();
+    updateSceneAll();
 }
 
 function webGLStart() {
@@ -574,7 +706,7 @@ function webGLStart() {
         }
     }
 
-    drawScene();
+    updateSceneAll();
 
     checkboxJuliabox = document.getElementById("toggle-juliabox");
     checkboxSlicer = document.getElementById("toggle-slicer");
