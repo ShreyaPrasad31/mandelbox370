@@ -300,6 +300,8 @@
                     escapeDistance = 2.0;
                 else
                     escapeDistance = 2.0 * (scaleFactor + 1) / (scaleFactor - 1);
+                $('#slider-slice').slider( "option", "min", -escapeDistance);
+                $('#slider-slice').slider( "option", "max", +escapeDistance);
 
                 drawScene();
             }
