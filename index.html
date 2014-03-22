@@ -154,6 +154,7 @@
     uniform float scaleFactor;
     uniform float zoom2D;
     uniform float sliceLocation;
+    uniform float escapeDistance;
     uniform int maxIterations;
     uniform vec2 center;
     
@@ -163,6 +164,7 @@
     void main(void) 
     {
         int iterations = 0;
+        float limit = escapeDistance * escapeDistance * 4.0;
 
         vec3 c = vec3((v_texCoord - 0.5) * zoom2D + center, sliceLocation);
         vec3 v = c;
@@ -185,7 +187,7 @@
 
             v = scaleFactor * v + c;
 
-            if (v.x * v.x > 56.0 || v.y * v.y > 56.0 || v.z * v.z > 56.0)
+            if (v.x * v.x > limit || v.y * v.y > limit || v.z * v.z > limit)
                 break;
 
             iterations++;
@@ -195,7 +197,8 @@
         {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
         }
-        else if (iterations == 0)
+        else if (abs(c.x) > escapeDistance || abs(c.y) > escapeDistance ||
+                 abs(c.z) > escapeDistance)
         {
             if (mod(floor(c.x) + floor(c.y), 2.0) < 1.0)
                 gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
@@ -205,9 +208,9 @@
         else
         {
             gl_FragColor = vec4(vec3(
-                0.8 + 0.3 * sin(float(iterations) * 0.7),
-                0.8 + 0.3 * sin(float(iterations) * 0.9),
-                0.8 + 0.3 * sin(float(iterations) * 0.5)),
+                0.7 + 0.3 * sin(float(iterations) * 0.7 + 0.5),
+                0.7 + 0.3 * sin(float(iterations) * 0.9 + 0.1),
+                0.7 + 0.3 * sin(float(iterations) * 0.5 + 0.3)),
                 1.0);
         }
     }
@@ -271,6 +274,7 @@
     var zoom2D = 10.0;
     var anchor2D = vec2.fromValues(0, 0);
     var anchor3D = vec3.fromValues(0, 0, 0);
+    var escapeDistance = 2.0*(3+1)/(3-1);
 
     // Mandelbox parameters
     var scaleFactor = 3.0;
@@ -289,6 +293,14 @@
             slide: function( event, ui ) {
                 $( "#slider-scale-indicator" ).val( ui.value );
                 scaleFactor = ui.value;
+
+                // The escape distances for each scale factor were derived
+                // mathematically.
+                if (scaleFactor <= 0)
+                    escapeDistance = 2.0;
+                else
+                    escapeDistance = 2.0 * (scaleFactor + 1) / (scaleFactor - 1);
+
                 drawScene();
             }
         });
@@ -422,6 +434,8 @@
             "center");
         shaderProgram2D.zoom2D = gl.getUniformLocation(shaderProgram2D,
             "zoom2D");
+        shaderProgram2D.escapeDistance = gl.getUniformLocation(shaderProgram2D,
+            "escapeDistance");
 
         shaderProgram3D = createProgram("shader-3dbox", "shader-vs");
         shaderProgram3D.anchor = gl.getUniformLocation(shaderProgram3D,
@@ -480,6 +494,7 @@
         gl.uniform1f(shaderProgram2D.paramScale, scaleFactor);
         gl.uniform1f(shaderProgram2D.zoom2D, zoom2D);
         gl.uniform1f(shaderProgram2D.sliceLocation, sliceLocation);
+        gl.uniform1f(shaderProgram2D.escapeDistance, escapeDistance);
         gl.uniform1i(shaderProgram2D.maxIterations, maxIterations);
 
         // Assign geometry.
