@@ -576,12 +576,20 @@
 
     }
 
+    var lastFrameTime = new Date().getTime();
+    var time = 0;
     function drawScene() {
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
         //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        // Smooth out the timing measures.
+        time = time * 0.9 + (new Date().getTime() - lastFrameTime) * 0.1;
+        // $( "#debuglabel" ).val( time );
+
         drawScene2D();
         drawScene3D();
+
+        lastFrameTime = new Date().getTime();
     }
 
     function isIn3DviewArea(x, y) {
