@@ -418,11 +418,10 @@ var lastFrameTime = new Date().getTime();
 var time = 0;
 function drawScene() {
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-    //gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Smooth out the timing measures.
-    time = time * 0.9 + (new Date().getTime() - lastFrameTime) * 0.1;
-    $( "#debuglabel" ).val( time );
+    time = time * 0.8 + (new Date().getTime() - lastFrameTime) * 0.2;
+    $( "#framerateLabel" ).val( "Rendered in " + Math.floor(time) + "ms." );
 
     drawScene2D();
 
@@ -564,13 +563,13 @@ function handleMouseMove(event) {
     if (mouseDown2dView) {
         if (viewJuliabox) {
             setJuliaboxCoord(mousePos.x, mousePos.y);
+            updateSceneAll();
         } else {
             var diff = vec2.fromValues(lastMouseX - newX, newY - lastMouseY);
             diff = vec2.scale(diff, diff, zoom2D / view2DWidth);
             anchor2D = vec2.add(anchor2D, anchor2D, diff);
+            updateScene2D();
         }
-
-        updateScene2D();
     } else if (mouseDown3dView) {
 
         theta += -(newX - lastMouseX) / gl.viewportWidth * 4;
