@@ -33,15 +33,18 @@
     uniform vec3 cameraPos;
     uniform vec3 cameraLook;
     uniform vec3 cameraUp;
+    uniform vec3 juliaboxConstant;
     uniform float scaleFactor;
     uniform float sliceLocation;
     uniform float epsilon;
     uniform int maxIterations;
+    uniform bool juliaboxMode;
     uniform bool viewSlicingPlane;
 
     float distanceEstimate(vec3 rayPos, float constant1, float constant2)
     {
-        vec3 c = rayPos;
+        // For the Juliabox, c is a constant. For the Mandelbox, c is variable.
+        vec3 c = juliaboxMode ? juliaboxConstant : rayPos;
         vec3 v = rayPos;
         float dr = 1.0;
 
@@ -127,8 +130,9 @@
             color = vec4(vec3(1.0, 1.0, 1.0) * (1.0 - distRatio), 1.0);
         }
 
-        // Draw transparent slicing plane if needed.
-        if (crossedPlane && viewSlicingPlane)
+        // Draw transparent slicing plane if needed (there's no point in
+        // drawing the slicing point for juliamode since it's not slicing it).
+        if (crossedPlane && viewSlicingPlane && !juliaboxMode)
             color += vec4(-0.1, -0.1, 0.3, 0.0);
 
         // Draw anchor if needed.
@@ -156,7 +160,9 @@
     uniform float sliceLocation;
     uniform float escapeDistance;
     uniform int maxIterations;
+    uniform bool juliaboxMode;
     uniform vec2 center;
+    uniform vec3 juliaboxConstant;
     
     // the texCoords passed in from the vertex shader.
     varying vec2 v_texCoord;
@@ -213,6 +219,12 @@
                 0.7 + 0.3 * sin(float(iterations) * 0.5 + 0.3)),
                 1.0);
         }
+
+        // Draw a circle at the center of the point used as the constant for
+        // the Juliabox, if needed.
+        bool nearBoxConstant = length(c.xy - juliaboxConstant.xy) < zoom2D * 0.02;
+        if (nearBoxConstant && juliaboxMode)
+            gl_FragColor += vec4(0.5, -0.4, -0.4, 0.0);
     }
 </script>
 
@@ -242,6 +254,7 @@
 
 <script type="text/javascript">
 
+    var canvas;
     var gl;
     var shaderProgram2D;
     var shaderProgram3D;
@@ -256,6 +269,7 @@
     var view2DWidth  = 300;
     var view2DHeight = 300;
     var view2DxPos   = 600;
+    var view2DyPos   = 300;
 
     // UI Controls
     var checkboxJuliabox;
@@ -282,6 +296,8 @@
     var maxIterations = 15;
     var accuracy = -4;
     var viewSlicingPlane = true;
+    var viewJuliabox = false;
+    var juliaboxConstant = vec3.fromValues(0, 0, 0);
 
     // JQuery stuff
     $(function() {
@@ -426,6 +442,8 @@
         program.paramScale = gl.getUniformLocation(program, "scaleFactor");
         program.maxIterations = gl.getUniformLocation(program, "maxIterations");
         program.sliceLocation = gl.getUniformLocation(program, "sliceLocation");
+        program.juliaboxConstant = gl.getUniformLocation(program, "juliaboxConstant");
+        program.juliaboxMode = gl.getUniformLocation(program, "juliaboxMode");
 
         return program;
     }
@@ -490,6 +508,8 @@
         gl.useProgram(shaderProgram2D);
 
         // Pass in parameters.
+        gl.uniform3f(shaderProgram2D.juliaboxConstant, 
+            juliaboxConstant[0], juliaboxConstant[1], juliaboxConstant[2]);
         gl.uniform2f(shaderProgram2D.resolutionUniform, 
             gl.viewportWidth, gl.viewportHeight);
         gl.uniform2f(shaderProgram2D.center, anchor2D[0], anchor2D[1]);
@@ -498,6 +518,7 @@
         gl.uniform1f(shaderProgram2D.sliceLocation, sliceLocation);
         gl.uniform1f(shaderProgram2D.escapeDistance, escapeDistance);
         gl.uniform1i(shaderProgram2D.maxIterations, maxIterations);
+        gl.uniform1i(shaderProgram2D.juliaboxMode, viewJuliabox);
 
         // Assign geometry.
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview2DBuffer);
@@ -528,11 +549,14 @@
         gl.uniform3f(shaderProgram3D.cameraUp, 0, 1.0, 0);
         gl.uniform3f(shaderProgram3D.anchor, 
             anchor3D[0], anchor3D[1], anchor3D[2]);
+        gl.uniform3f(shaderProgram3D.juliaboxConstant, 
+            juliaboxConstant[0], juliaboxConstant[1], juliaboxConstant[2]);
         gl.uniform1f(shaderProgram3D.paramScale, scaleFactor);
         gl.uniform1f(shaderProgram3D.sliceLocation, sliceLocation);
         gl.uniform1f(shaderProgram3D.epsilon, accuracy);
         gl.uniform1i(shaderProgram3D.maxIterations, maxIterations);
         gl.uniform1i(shaderProgram3D.viewSlicingPlane, viewSlicingPlane);
+        gl.uniform1i(shaderProgram3D.juliaboxMode, viewJuliabox);
 
         gl.bindBuffer(gl.ARRAY_BUFFER, renderview3DBuffer);
         gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
@@ -562,7 +586,7 @@
     }
 
     function distanceEstimate(rayPos, constant1, constant2) {
-        var c = vec3.clone(rayPos);
+        var c = viewJuliabox ? juliaboxConstant : vec3.clone(rayPos);
         var v = vec3.clone(rayPos);
         var dr = 1.0;
 
@@ -611,14 +635,35 @@
         return distance;
     }
 
-    function handleMouseDown(event) {
-        if (isIn2DviewArea(event.clientX, event.clientY))
-            mouseDown2dView = true;
-        else if (isIn3DviewArea(event.clientX, event.clientY))
-            mouseDown3dView = true;
+    function setJuliaboxCoord(x, y) {
+        juliaboxConstant = vec3.fromValues(
+            ((x - view2DxPos) / view2DWidth - 0.5) * zoom2D + anchor2D[0],
+            (0.5 - (y - view2DyPos) / view2DHeight) * zoom2D + anchor2D[1],
+            sliceLocation);
+    }
 
-        lastMouseX = event.clientX;
-        lastMouseY = event.clientY;
+    function getMousePos(evt) {
+        // Need the mouse position relative to the canvas.
+        var rect = canvas.getBoundingClientRect();
+        return {
+          x: evt.clientX - rect.left,
+          y: evt.clientY - rect.top
+        };
+    }
+
+    function handleMouseDown(event) {
+        var mousePos = getMousePos(event);
+
+        if (isIn2DviewArea(mousePos.x, mousePos.y)) {
+            mouseDown2dView = true;
+            setJuliaboxCoord(mousePos.x, mousePos.y);
+        }
+        else if (isIn3DviewArea(mousePos.x, mousePos.y)) {
+            mouseDown3dView = true;
+        }
+
+        lastMouseX = mousePos.x;
+        lastMouseY = mousePos.y;
     }
 
     function handleMouseUp(event) {
@@ -627,13 +672,18 @@
     }
 
     function handleMouseMove(event) {
-        var newX = event.clientX;
-        var newY = event.clientY;
+        var mousePos = getMousePos(event);
+        var newX = mousePos.x;
+        var newY = mousePos.y;
 
         if (mouseDown2dView) {
-            var diff = vec2.fromValues(lastMouseX - newX, newY - lastMouseY);
-            diff = vec2.scale(diff, diff, zoom2D / view2DWidth);
-            anchor2D = vec2.add(anchor2D, anchor2D, diff);
+            if (viewJuliabox) {
+                setJuliaboxCoord(mousePos.x, mousePos.y);
+            } else {
+                var diff = vec2.fromValues(lastMouseX - newX, newY - lastMouseY);
+                diff = vec2.scale(diff, diff, zoom2D / view2DWidth);
+                anchor2D = vec2.add(anchor2D, anchor2D, diff);
+            }
         } else if (mouseDown3dView) {
 
             theta += -(newX - lastMouseX) / gl.viewportWidth * 4;
@@ -660,10 +710,11 @@
             //properties are different.
             rolled = -40 * event.detail;
 
-        if (isIn2DviewArea(event.clientX, event.clientY)) {
+        var mousePos = getMousePos(event);
+        if (isIn2DviewArea(mousePos.x, mousePos.y)) {
             zoom2D *= Math.pow(0.9, rolled / 120);
         }
-        else if (isIn3DviewArea(event.clientX, event.clientY)) {
+        else if (isIn3DviewArea(mousePos.x, mousePos.y)) {
             distance *= Math.pow(0.9, rolled / 120);
         }
         
@@ -686,6 +737,8 @@
         vec3.normalize(side, vec3.cross(side, up, look));
         vec3.cross(up, look, side);
 
+        var mousePos = getMousePos(event);
+
         // Sample the distances to the fractal in a small 3x3 window
         // around the position of the mouse click.
         var distances = new Array();
@@ -693,9 +746,9 @@
             for (var dy = -1; dy <= 1; dy++) {
                 var rayDir = vec3.clone(look);
                 vec3.scaleAndAdd(rayDir, rayDir, side, 
-                    (event.clientX + dx) / view3DWidth - 0.5);
+                    (mousePos.x + dx) / view3DWidth - 0.5);
                 vec3.scaleAndAdd(rayDir, rayDir, up, 
-                    0.5 - (event.clientY + dy) / view3DHeight);
+                    0.5 - (mousePos.y + dy) / view3DHeight);
 
                 distances.push(getRayLength(pos, rayDir));
             }
@@ -709,9 +762,9 @@
         if (distances[2] < 50.0) {
             var rayDir = vec3.clone(look);
             vec3.scaleAndAdd(rayDir, rayDir, side, 
-                event.clientX / view3DWidth - 0.5);
+                mousePos.x / view3DWidth - 0.5);
             vec3.scaleAndAdd(rayDir, rayDir, up, 
-                0.5 - event.clientY / view3DHeight); 
+                0.5 - mousePos.y / view3DHeight); 
             vec3.scaleAndAdd(anchor3D, pos, rayDir, distances[2]);
             distance = distances[2];
         }
@@ -720,9 +773,10 @@
     }
 
     function handleDoubleClick(event) {
-        if (isIn2DviewArea(event.clientX, event.clientY))
+        var mousePos = getMousePos(event);
+        if (isIn2DviewArea(mousePos.x, mousePos.y))
             mouseDown2dView = true;
-        else if (isIn3DviewArea(event.clientX, event.clientY))
+        else if (isIn3DviewArea(mousePos.x, mousePos.y))
             handleDoubleClick3D(event);
 
         // Sometimes double click leaves the mouse in a "down" state.
@@ -731,7 +785,7 @@
     }
 
     function handleCheckboxClickJuliaBox(event) {
-        
+        viewJuliabox = checkboxJuliabox.checked;
         drawScene();
     }
 
@@ -741,7 +795,7 @@
     }
 
     function webGLStart() {
-        var canvas = document.getElementById("mandelbox-canvas");
+        canvas = document.getElementById("mandelbox-canvas");
         initGL(canvas);
         initShaders();
         initBuffers();
