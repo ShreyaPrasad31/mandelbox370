@@ -40,6 +40,42 @@
     uniform int maxIterations;
     uniform bool juliaboxMode;
     uniform bool viewSlicingPlane;
+    uniform bool viewColor;
+
+    vec3 getColor(vec3 pos)
+    {
+        // For the Juliabox, c is a constant. For the Mandelbox, c is variable.
+        vec3 c = juliaboxMode ? juliaboxConstant : pos;
+        vec3 v = pos;
+
+        float minDist = 1.0;
+
+        for (int i = 0; i < MAX_ITERS; i++)
+        {
+            // GLSL doesn't support variable loop indices...
+            if (i == maxIterations)
+                break;
+
+            // Box fold
+            v = clamp(v, -1.0, 1.0) * 2.0 - v;
+
+            // Sphere fold.
+            float mag = dot(v, v);
+            if (mag < 0.25)
+                v = v * 4.0;
+            else if (mag < 1.0)
+                v = v / mag;
+
+            v = v * scaleFactor + c;
+            minDist = min(minDist, length(v));
+        }
+
+        float fractionalIterationCount = log(dot(v, v));
+        return vec3(
+            0.85 + 0.15 * sin(fractionalIterationCount * 0.52 + 0.7), 
+            0.85 + 0.15 * sin(fractionalIterationCount * 0.73 + 1.8),
+            0.85 + 0.15 * sin(fractionalIterationCount * 0.31 + 1.1));
+    }
 
     float distanceEstimate(vec3 rayPos, float constant1, float constant2)
     {
@@ -77,6 +113,14 @@
         return (length(v) - constant1) / dr - constant2;
     }
 
+    float distanceEstimate(vec3 rayPos)
+    {
+        float constant1 = abs(scaleFactor - 1.0);
+        float constant2 = pow(float(abs(scaleFactor)), float(1 - maxIterations));
+        return distanceEstimate(rayPos, constant1, constant2);
+    }
+
+
     int rayMarch(vec3 rayDir, inout float distance) {
         int stepCount = 0;
 
@@ -94,13 +138,49 @@
             distance += de * 0.95;
             stepCount++;
 
-            if (de < epsilon)
+            if (de < epsilon || distance > MAX_DIST)
                 return stepCount;
-            else if (distance > MAX_DIST)
-                return 0;
         }
 
         return MAX_STEPS;
+    }
+
+    vec3 getNormal(vec3 pos)
+    {
+        // boxplorer's method for estimating the normal at a point
+        vec4 eps = vec4(0, epsilon, 2.0 * epsilon, 3.0 * epsilon);
+        return normalize(vec3(
+            -distanceEstimate(pos - eps.yxx) + distanceEstimate(pos + eps.yxx),
+            -distanceEstimate(pos - eps.xyx) + distanceEstimate(pos + eps.xyx),
+            -distanceEstimate(pos - eps.xxy) + distanceEstimate(pos + eps.xxy)));
+    }
+
+    vec3 getBlinnShading(vec3 normal, vec3 view, vec3 light) 
+    {
+        // boxplorer's method
+        vec3 halfLV = normalize(light + view);
+        float spe = pow(max( dot(normal, halfLV), 0.0 ), 32.0);
+        float dif = dot(normal, light) * 0.5 + 0.75;
+        return dif * vec3(1.0, 1.0, 1.0);// + spe*specularColor;
+    }
+
+    float getAmbientOcclusion(vec3 pos, vec3 normal) 
+    {
+        // boxplorer's method
+        float ambientOcclusion = 1.0;
+        float w = 0.1 / epsilon / 5.0;
+        float distance = 2.0 * epsilon * 5.0;
+  
+        for (int i = 0; i < 5; i++) 
+        {
+            ambientOcclusion -=
+                (distance - distanceEstimate(pos + normal * distance)) * w;
+            w *= 0.5;
+            distance = distance * 2.0 - epsilon * 5.0;
+        }
+
+        // Smaller value = Darker
+        return clamp(ambientOcclusion, 0.0, 1.0);
     }
 
     void main(void) 
@@ -122,9 +202,11 @@
             (cameraPos.x < sliceLocation) != (finalRayPos.x < sliceLocation);
 
         // Base background color.
-        vec4 color = vec4(0.5, 0.3, 0.7, 1.0);
+        vec4 glowColor = vec4(0.5, 0.5, 0.8, 1.0);
+        vec4 bgColor = vec4(0.4, 0.3, 0.7, 1.0);
+        vec4 color = bgColor;
 
-        if (steps > 0)
+        if (distance < MAX_DIST)
         {
             // The (log(epsilon) * 2.0) offset is to compensate for the fact
             // that more steps are taken when epsilon is small.
@@ -133,11 +215,34 @@
 
             // Sqrt increases contrast.
             float distRatio = sqrt(adjusted / adjustedMax) * 0.8;
-            color = vec4(vec3(1.0, 1.0, 1.0) * (1.0 - distRatio), 1.0);
+
+            if (viewColor)
+                color = vec4(getColor(finalRayPos) * (1.0 - distRatio), 1.0);
+            else
+                color = vec4(vec3(1.0, 1.0, 1.0) * (1.0 - distRatio), 1.0);
+
+            // Calculating the normal can screw up when the point is not close
+            // enough to the fractal due to timeout.
+            if (steps < MAX_STEPS)
+            {
+                vec3 normal = getNormal(finalRayPos);
+                color = vec4(mix(vec3(0.0, 0.0, 0.0), color.xyz, 
+                                 getAmbientOcclusion(finalRayPos, normal) * 0.5 + 0.5), 
+                             1.0);
+
+                // Use two lights.
+                vec3 light = mix(
+                    getBlinnShading(normal, rayDir, normalize(vec3(1.0, 2.0, 3.0))),
+                    getBlinnShading(normal, rayDir, normalize(vec3(-1.0, 1.5, 2.5))),
+                        0.5);
+                color = vec4(mix(light, color.xyz, 0.8), 1.0);
+            }
         }
 
+        //color = mix(color, glowColor, float(steps) / float(MAX_STEPS) * 0.8);
+
         // Draw transparent slicing plane if needed (there's no point in
-        // drawing the slicing point for juliamode since it's not slicing it).
+        // drawing the slicing point for juliamode s0ince it's not slicing it).
         if (crossedPlane && viewSlicingPlane && !juliaboxMode)
             color += vec4(-0.1, -0.1, 0.3, 0.0);
 
@@ -297,7 +402,10 @@
 
             <input type="checkbox" id="toggle-juliabox"><label for="toggle-juliabox">View Juliabox</label>
             <input type="checkbox" id="toggle-slicer" checked><label for="toggle-slicer">View Slicing Plane</label>
+            <input type="checkbox" id="toggle-color"><label for="toggle-color">View Color</label>
 
+            <br/><br/>
+            <input type="text" id="framerateLabel" style="border:0; color:#f6931f; font-weight:bold;">
             <!-- use with $( "#debuglabel" ).val( something ); -->
             <input type="text" id="debuglabel" style="border:0; color:#f6931f; font-weight:bold;">
         </div>

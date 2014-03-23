@@ -33,6 +33,7 @@ var highResMode = false;
 // UI Controls
 var checkboxJuliabox;
 var checkboxSlicer;
+var checkboxColor;
 
 // For mouse input
 var mouseDown2dView = false;
@@ -56,6 +57,7 @@ var maxIterations = 15;
 var accuracy = -4;
 var viewSlicingPlane = true;
 var viewJuliabox = false;
+var viewColor = false;
 var juliaboxConstant = vec3.fromValues(0, 0, 0);
 var isDirty3D = true;
 
@@ -281,6 +283,8 @@ function initShaders() {
         "epsilon");
     shaderProgram3D.viewSlicingPlane = gl.getUniformLocation(shaderProgram3D,
         "viewSlicingPlane");
+    shaderProgram3D.viewColor = gl.getUniformLocation(shaderProgram3D,
+        "viewColor");
 }
 
 function initBuffers() {
@@ -366,6 +370,7 @@ function drawScene3D(rectBuffer) {
     gl.uniform1i(shaderProgram3D.maxIterations, maxIterations);
     gl.uniform1i(shaderProgram3D.viewSlicingPlane, viewSlicingPlane);
     gl.uniform1i(shaderProgram3D.juliaboxMode, viewJuliabox);
+    gl.uniform1i(shaderProgram3D.viewColor, viewColor);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, rectBuffer);
     gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
@@ -678,6 +683,11 @@ function handleCheckboxClickSlicer(event) {
     updateSceneAll();
 }
 
+function handleCheckboxClickColor(event) {
+    viewColor = checkboxColor.checked;
+    updateScene3D();
+}
+
 function webGLStart() {
     canvas = document.getElementById("mandelbox-canvas");
     initGL(canvas);
@@ -709,8 +719,10 @@ function webGLStart() {
 
     checkboxJuliabox = document.getElementById("toggle-juliabox");
     checkboxSlicer = document.getElementById("toggle-slicer");
+    checkboxColor = document.getElementById("toggle-color");
     checkboxJuliabox.onclick = handleCheckboxClickJuliaBox;
     checkboxSlicer.onclick = handleCheckboxClickSlicer;
+    checkboxColor.onclick = handleCheckboxClickColor;
 
     // Avoid double click selecting text.
     $("body").disableSelection();
