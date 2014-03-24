@@ -69,7 +69,7 @@
 
     <h1>The Mandelbox Set</h1>
 
-    The Mandelbox set is a mathematical set defined by iterations of points on a plane by a family of function \( T_\mu \), much like the famous Mandelbrot set after which its name is derived. The set can easily be generalized to any number of dimension and different values for the scale parameter \( \mu \) can lead to a wide range of different patterns. While popular is the fractal art communities, it has not yet been formally studied. In this project, created as part of Winter 2014's PMATH 370 course at University of Waterloo, I prove some basic properties of the Mandelbox set and provide a WebGL applet to navigate the 2D and 3D versions of this fractal.
+    The Mandelbox set is a mathematical set defined by iterations of points on a plane by a family of function \( T_\mu \), much like the famous Mandelbrot set after which its name is derived. The set can easily be generalized to any number of dimension and different values for the scale parameter \( \mu \) can lead to a wide range of different patterns. While popular in the fractal art community, it has not yet been formally studied. In this course project, created in the context Winter 2014's offering of PMATH 370 at University of Waterloo, I prove some basic properties of the Mandelbox set and provide a WebGL applet to navigate the 2D and 3D versions of this fractal.
     <p>
     <center><a href="explorer.html"><img src="pics/explorer1.png" width="600" /></a><br/><em>Mandelbox370 Fractal Explorer, requires WebGL-compatible browser and relatively recent (though not neccessarily fast) graphics card.</em></center>
     <br/><br/>
@@ -92,15 +92,15 @@
     <section>
         <a name="definitions"></a>
         <h1>Definitions</h1>
-        The Mandelbox set is similar to the Mandelbrot set. It is defined as the set of points who remain bounded under iteration under some function \( T_\mu \). That function, however, is somewhat more complicated than \( x^2 + c \), as it is composed of two subfunctions \( \bfold, \sfold \).
+        The Mandelbox set is similar to the Mandelbrot set. It is defined as the set of points who remain bounded under iteration under some function \( T_\mu \). That function, however, is somewhat more complicated than \( x^2 + c \). It is composed of two subfunctions \( \bfold, \sfold \).
         <p>
         <b>Definition (Box Fold): A box fold, or plane inversion is defined as \( \bfold(x) = \begin{cases} -2 - x & x < -1 \\ x & -1 \leq x \leq 1 \\ 2 - x & x > 1 \end{cases} \) when \( x \in \setR \) and \( \bfold(x_1, x_2, ..., x_n) = (\bfold(x_1), \bfold(x_2), ..., \bfold(x_n)) \) for \( \setR^n \).</b>
         <p>
-        This function can be thought of as "folding" the plane along the edges of a square centered at (0, 0) with side length 2. Note that the box could have different dimensions, but the standard Mandelbox set uses length 2, so we restrict our attention to this particular definition of the function.
+        This function can be thought of as "folding" the plane along the edges of a square centered at (0, 0) with side length 2. Note that the box could have a different size, but the standard Mandelbox set uses length 2, so we restrict our attention to this particular definition of the function.
         <p>
-        <b>Definition (Ball Fold): Let \( \vec{x} \in \setR^n \). A circle/sphere/ball fold, or circle/sphere/ball inversion, is defined as \( \sfold(\vec{x}) = \begin{cases} 4\vec{x} & \norm{\vec{x}} < \frac{1}{2} \\ \vec{x} / \norm{\vec{x}}^2 & \frac{1}{2} < \norm{\vec{x}} < 1 \\ \vec{x} & \norm{\vec{x}} \geq 1 \end{cases} \)</b>
+        <b>Definition (Ball Fold): Let \( \vec{x} \in \setR^n \). A circle/sphere/ball fold or inversion is defined as \( \sfold(\vec{x}) = \begin{cases} 4\vec{x} & \norm{\vec{x}} < \frac{1}{2} \\ \vec{x} / \norm{\vec{x}}^2 & \frac{1}{2} < \norm{\vec{x}} < 1 \\ \vec{x} & \norm{\vec{x}} \geq 1 \end{cases} \)</b>
         <p>
-        The ball fold transformation expands the inside of a sphere of radius 1. Note that the first case, \( \norm{\vec{x}} < \frac{1}{2} \) is present mostly to prevent the function from "blowing up" for points near \( \vec{0} \). The constant \( \frac{1}{2} \) could be different, we focus our attention on this "default" value and our proofs work for any value < 1. The ball fold transformation is similar to the sphere inversion operations used by [Jos Leys, 2006] to create circle-packing type fractals.
+        The ball fold transformation expands the inside of a sphere of radius 1. Note that the first case, \( \norm{\vec{x}} < \frac{1}{2} \) is present mostly to prevent the function from "blowing up" for points near \( \vec{0} \). The constant \( \frac{1}{2} \) could be different, we focus our attention on this "default" value and our proofs work for any value < 1. The ball fold transformation is similar to the sphere inversion operations used by [Jos Leys, 2005] to create circle-packing type fractals.
         <p>
         Note that both functions are continuous. These two functions may appear ad-hoc and difficult to understand. Fortunately, Tom Lowe <a href="http://vimeo.com/9745981">created a short video</a> that allow us to visualize these two operations when operated on a plane.
         <p>
@@ -110,7 +110,7 @@
         <p>
         We refer to \( \mboxset, \mu > 0 \) as <em>positive boxes</em> and \( \mboxset, \mu < 0 \) as <em>negative boxes</em>. Furthermore, we can easily obtain a definition of "Juliaboxes".
         <p>
-        <b>Definition (Juliabox set): The n-dimensional Juliabox Set \( \mboxset \) with scale parameter \( \mu \) with constant \( \vec{c} \) is defined as \( \jboxset = \{ \vec{v} \in \setR^n\ |\ \iter{\itfnc}{k}(\vec{v}) \not\to \infty \} \), where \( \itfnc(\vec{x}) = \mu \sfold(\bfold(\vec{x})) + \vec{c} \).</b>
+        <b>Definition (Juliabox set): The n-dimensional Juliabox Set \( \mboxset \) with scale parameter \( \mu \) with constant \( \vec{c} \) is defined as \( \jboxset[\vec{c}] = \{ \vec{v} \in \setR^n\ |\ \iter{\itfnc}{k}(\vec{v}) \not\to \infty \} \), where \( \itfnc(\vec{x}) = \mu \sfold(\bfold(\vec{x})) + \vec{c} \).</b>
         <p>
         These definitions can be complicated to work with, especially in higher dimensions when the number of components increases. Therefore, it is useful to study \( \itfnv \) as it operates on each component of a vector individually. This works well with \( \bfold \), which operates on each component/dimension independently. For \( \sfold \), this is not the case. However, note that if \( x_k \) is the kth component of \( \vec{x} \), then the kth component of \( \sfold(\vec{x}) \) is \( c \cdot x_k \) for some \( 1 < c < 4 \). We can use such simplifications in most of our proofs.
         <p>
@@ -133,7 +133,7 @@
         First, we ignore the Mandelbox for \( |\mu| < 1 \). These boxes are not interesting, since none of the points diverge to infinity. To see this, note that \( \norm{\vec{x}} \geq \norm{\bfold(\vec{x})} \), so box fold cannot cause the point to diverge. Sphere fold only increases the value of points inside a sphere of radius 1 by at most a factor of 4, so sphere fold cannot cause the value of points to diverge. Only multiplication by \( \mu \) can (adding the constant is offset by the fact that \( |\mu| < 1 \).
         <center><img src="pics/negativebox141.png" /><br/><em>2D Mandelbox, scale -1.41</em></center>
         <p>
-        Using the applet to render 2D mandelboxes for \( \mu < 1 \), we notice that all boxes appear to have length 4. This can be proven.
+        Using the applet to render 2D mandelboxes for \( \mu < -1 \), we notice that all boxes appear to have length 4. This can be proven.
         <p>
         <b>Theorem (Bounds for negative boxes): Let \( \mboxset \) be the Mandelbox Set in \( \mathbb{R}^n \) with scale parameter \( \mu < -1 \). Let \(\ \vec{v} = (v_1,...v_n) \in \mathbb{R}^n \). If \( |\max(v_1,...,v_n)| > 2 \), then \( \vec{v} \not\in M_{n,\mu} \).</b>
         <p>
@@ -206,7 +206,7 @@
         <b>Theorem: For \( 1 < \mu \leq 4\sqrt{n} + 1 \), the smallest box that contains every point in \( M_{n,\mu} \) is \( \underbrace{[-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}] \times [-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}] ... \times [-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}]}_n \)</b>
         </br>
         <p>
-        Proof : We show this by proving that the corners of this box are eventually periodic points of period 2. We do this for the corner when all the components are positive - the proof is the same for the other corners. That is, if \( \vec{v} = (\frac{2(\mu+1)}{\mu-1}, ..., \frac{2(\mu+1)}{\mu-1}) \), then \( \iter{\itfnv}{3}(\vec{0}) = \vec{0} \).
+        Proof : We show this by proving that the corners of this box are eventually periodic points of period 2. We do this for the corner when all the components are positive - the proof is the same for the other corners. More specifically, we show that if \( \vec{v} = (\frac{2(\mu+1)}{\mu-1}, ..., \frac{2(\mu+1)}{\mu-1}) \), then \( \{ \iter{\itfnv}{3}(\vec{0}), \iter{\itfnv}{1}(\vec{0}) \} \) is a two-cycle.
         <p>
         Note that \( \itfnv(0) = \frac{2(\mu+1)}{\mu-1} \). Then,
         \[
@@ -383,11 +383,13 @@
         <p>
         <center><a href="explorer.html"><img src="pics/explorer2.png" width="600" /></a><br/><em>Mandelbox370 Fractal Explorer. Interesting shapes can be found inside, such as this monkey helmet.</em></center>
         <p>
-        <b>Browser notes:</b> This applet uses WebGL and thus, requires a WebGL-compatible browser. This includes Chrome v33 or higher. On Windows, Firefox (as of v28) will take over a minute to compile the shaders and freeze in the meantime. Can't get it to work on IE 11 yet. Not tested on other browsers.
+        <b>Browser notes:</b> This applet uses WebGL and thus, requires a WebGL-compatible browser. This includes Chrome v33 or higher. On Windows, Firefox (as of v28) will take over a minute to compile the shaders and freeze in the meantime. I can't get it to work on IE 11 yet and it is not tested on other browsers.
         <p>
         <b>Graphics notes:</b> Unsurprisingly, a raytraced 3D fractal is quite graphics-intensive. On default parameters, a regular ultrabook integrated intel chip (e.g., HD 3000) should be able to run this at a reasonable framerate, but a dedicated graphics card is recommended. The graphics card does need to be relatively new (preferably 2012+, Sandy Bridge HD 2000 is too old for instance) - raytracing isn't a typical use of pixel shaders and falls more into GPGPU domain.
         <p>
-        <b>Mathematics notes:</b> The 2D view represents the 2D mandelbox based on the number of iterations before the orbit escapes and black represents points which do not escape, which is an accurate representation of the fractal. However, the 3D fractal is not generated straight from the definition and uses an approximation with unproven accuracy. The images are to be interpreted with a grain of salt.
+        <b>Mathematics notes:</b> The 2D view represents the 2D mandelbox based on the number of iterations before the orbit escapes and black represents points which do not escape, which is an accurate representation of the fractal. However, the 3D fractal is not generated straight from the definition and uses an approximation with unproven accuracy. The 3D renders are to be interpreted with a grain of salt.
+        <p>
+        Some of the shader code is recycled from one of my <a href="http://www.digitalfreepen.com/fractal-photographer-3d/">earlier 3D fractal project</a>.
         <p>
         <h3>Usage Guide</h3>
         <p>
@@ -395,7 +397,7 @@
         <p>
         <b>(1)</b> The 3D view allows you to navigate the 3D Mandelbox set. The red dot in the center represents the anchor of rotation. Initially, it is centered at the origin, but you can double-click anywhere on the fractal to change the anchor. This is useful for navigating specific parts of the fractal - e.g., the inside. The blue plane that cuts through the Mandelbox is the slicing plane, which renders a 2D Mandelbox in (4).
         <p>
-        <b>(2)</b> The sliders allow you to adjust various parameters. The number of Iterations the amount of detail on the fractal. For the 3D view, this usually only needs to be increased around \( \mu = -1.5 \). The Scale Factor is the value of \( \mu \). The Slice Location controls the (blue) slicing plane. The accuracy controls the amount of detail in the 3D render. Adjust only as you zoom in. The more accurate the fractal, the most foam/dust-like and the more light it traps. Increasing it too much will cause the fractal to be completely black.
+        <b>(2)</b> The sliders allow you to adjust various parameters. The number of iterations the amount of detail on the fractal. For the 3D view, this usually only needs to be increased around \( \mu = -1.5 \). The Scale Factor is the value of \( \mu \). The Slice Location controls the (blue) slicing plane. The accuracy controls the amount of detail in the 3D render. Adjust only as you zoom in. The more accurate the fractal, the most foam/dust-like and the more light it traps. Increasing it too much will cause the fractal to be completely black.
         <p>
         <b>(3)</b> View Slicing Plane and View Anchor are there for convenience. View Juliabox changes the 3D view to Juliabox Mode. The 2D view stays in Mandelbox Mode and a red dot appears allowing you to select the constant \( c \) for the Juliabox (along with the slicing plane). View Color adds some color loosely based on escape-time, which can be pretty sometimes and add contrast but really doesn't mean anything.
         <p>
@@ -405,7 +407,7 @@
         <p>
         Rendering the 2D Mandelbox is rather trivial and is done using the same techniques as every other 2D fractal. It gets more complex as we get to 3D - if we want real-time rendering while still having sufficient details on the surface of the fractal, we can't compute the whole fractal with voxels. Although this was shown to be possible with Octrees in [Crassin et al., 2009], this implementing voxel rendering on the GPU is very complicated.
         <p>
-        Fortunately, an approach pioneered in [Hart and al., 1989] which is commonly refered to nowadays as <a href="http://blog.hvidtfeldts.net/index.php/2011/06/distance-estimated-3d-fractals-part-i/">distance</a> <a href="http://iquilezles.org/www/articles/distancefractals/distancefractals.htm">estimation</a> allows a speedy, real-time implementation. The idea behind this approach is to find a function \( d(\vec{v}) \) that gives an estimate of the distance to the closest point in \( \mboxset \) from \( \vec{v} \not\in \mboxset \).
+        Fortunately, an approach pioneered in [Hart et al., 1989] which is commonly refered to nowadays as <a href="http://blog.hvidtfeldts.net/index.php/2011/06/distance-estimated-3d-fractals-part-i/">distance</a> <a href="http://iquilezles.org/www/articles/distancefractals/distancefractals.htm">estimation</a> allows a speedy, real-time implementation. The idea behind this approach is to find a function \( d(\vec{v}) \) that gives an estimate of the distance to the closest point in \( \mboxset \) from \( \vec{v} \not\in \mboxset \).
         <p>
         How might we find such a function? The idea is similar to the approach used for smooth coloring on the Mandelbrot [Barrallo and al., 1999]. The observation is that points closer to the fractal will take longer to escape to infinity. Alternatively, the further a point \( \vec{v} \) is to the fractal, the farther \( \iter{T_\mu}{n}(\vec{v}) \) will be. For the Mandelbox, the formulas commonly used are used mostly because they happen to look good. Mikael Hvidtfeldt makes some <a href="http://blog.hvidtfeldts.net/index.php/2011/11/distance-estimated-3d-fractals-vi-the-mandelbox/">attempts </a> at providing an informal derivation of why the formulas would work, but I think there's still a lot of research to be done in the area.
         <p>
@@ -442,7 +444,7 @@
         <p>
         <center><img src="pics/extra_kali2.png" width="300" /><img src="pics/extra_kali3.png" width="300" /><br/>Kali's fractal, "Julia" mode.</center>
         <p>
-        Why do the Mandelbox and these Kaleidoscopic fractals generate or mimic so many others? As <a href="http://www.fractalforums.com/3d-fractal-generation/happy-birthday-mandelbox!">Tom Lowe's</a> describe, the formula of the Mandelbox scales, translates and rotates points around the plane (rotation happens after adding the constant \( \vec{c} \)). This corresponds to how most fractals are generated. To some extent, the parameters of the Mandelbox control the amount of scaling, translation and rotation that occurs.
+        Why do the Mandelbox and these Kaleidoscopic fractals generate or mimic so many others? As <a href="http://www.fractalforums.com/3d-fractal-generation/happy-birthday-mandelbox!">Tom Lowe</a> describes, the formula of the Mandelbox scales, translates and rotates points around the plane (rotation happens after adding the constant \( \vec{c} \)). This corresponds to how most fractals are generated. To some extent, the parameters of the Mandelbox control the amount of scaling, translation and rotation that occurs.
         <p>
         Hence my interest in these fractal systems. I think it would be very interesting for these fractal systems to receive further mathematical research, so we can deepen our understanding on how Kaleidoscopic fractals generate other fractals.
         <p>
@@ -460,6 +462,7 @@
         Lowe, Tom. What is the Mandelbox. https://sites.google.com/site/mandelbox/what-is-a-mandelbox Accessed 2014 March 23.
         <p>
         Hvidtfeldt, Mikael. Distance Estimated 3D Fractals. http://blog.hvidtfeldts.net/index.php/2011/06/distance-estimated-3d-fractals-part-i/ Accessed 2014 March 23.
+        <p>
         Leys, Jos. Sphere Inversion Fractals. Computer and Graphics, Volume 29-3, June, 2005.
         <p>
         Miquel. The Mandelbox Fractal: A New Landscape of Architectural & Organic Qualities. http://www.miqel.com/fractals_math_patterns/mandelbox_3d_fractal.html  Accessed 2014 March 23.
@@ -467,6 +470,7 @@
         Hart, C. John et al. Ray Tracing Deterministic 3-D Fractals. Computer Graphics, Volume 23-3, July 1989.
         <p>
         Crassin, Cyril et al. GigaVoxels: Ray-Guided Streaming for Efficient and Detailed Voxel Rendering. Proceedings of the 2009 symposium on Interactive 3D graphics and games.
+        <p>
         Barrallo, J., Jones, Damien M. Coloring Algorithms for Dynamical Systems in the Complex Plane. The University of the Basque Country
         <p>
         PMATH370 Lecture Notes, Kevin Hare. University of Waterloo, Winter 2014.
@@ -509,6 +513,9 @@
         <a href='#references'>References</a>
       </li>
     </ul>
+    <em>Rudi Chen<br/>
+    University of<br/>
+    Waterloo</em>
   </div>
 </div>
 
