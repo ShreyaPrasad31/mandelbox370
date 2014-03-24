@@ -41,6 +41,7 @@
     uniform bool juliaboxMode;
     uniform bool viewSlicingPlane;
     uniform bool viewColor;
+    uniform bool viewAnchor;
 
     vec3 getColor(vec3 pos)
     {
@@ -247,7 +248,7 @@
             color += vec4(-0.1, -0.1, 0.3, 0.0);
 
         // Draw anchor if needed.
-        if (length(coord) < 0.01)
+        if (length(coord) < 0.01 && viewAnchor)
         {
             if (length(cameraPos - anchor) < distance)
                 // Solid color if in front of fractal.
@@ -403,6 +404,7 @@
             <input type="checkbox" id="toggle-juliabox"><label for="toggle-juliabox">View Juliabox</label>
             <input type="checkbox" id="toggle-slicer" checked><label for="toggle-slicer">View Slicing Plane</label>
             <input type="checkbox" id="toggle-color"><label for="toggle-color">View Color</label>
+            <input type="checkbox" id="toggle-anchor" checked><label for="toggle-anchor">View Anchor</label>
 
             <br/><br/>
             <input type="text" id="framerateLabel" style="border:0; color:#f6931f; font-weight:bold;">

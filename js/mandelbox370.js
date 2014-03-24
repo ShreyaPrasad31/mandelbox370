@@ -34,6 +34,7 @@ var highResMode = false;
 var checkboxJuliabox;
 var checkboxSlicer;
 var checkboxColor;
+var checkboxAnchor;
 
 // For mouse input
 var mouseDown2dView = false;
@@ -58,6 +59,7 @@ var accuracy = -4;
 var viewSlicingPlane = true;
 var viewJuliabox = false;
 var viewColor = false;
+var viewAnchor = true;
 var juliaboxConstant = vec3.fromValues(0, 0, 0);
 var isDirty3D = true;
 
@@ -65,9 +67,9 @@ var isDirty3D = true;
 $(function() {
     $( "#slider-scale" ).slider({
         min: -5,
-        max: 6,
+        max: 7,
         value: 3,
-        step: 0.01,
+        step: 0.05,
         slide: function( event, ui ) {
             $( "#slider-scale-indicator" ).val( ui.value );
             scaleFactor = ui.value;
@@ -285,6 +287,8 @@ function initShaders() {
         "viewSlicingPlane");
     shaderProgram3D.viewColor = gl.getUniformLocation(shaderProgram3D,
         "viewColor");
+    shaderProgram3D.viewAnchor = gl.getUniformLocation(shaderProgram3D,
+        "viewAnchor");
 }
 
 function initBuffers() {
@@ -371,6 +375,7 @@ function drawScene3D(rectBuffer) {
     gl.uniform1i(shaderProgram3D.viewSlicingPlane, viewSlicingPlane);
     gl.uniform1i(shaderProgram3D.juliaboxMode, viewJuliabox);
     gl.uniform1i(shaderProgram3D.viewColor, viewColor);
+    gl.uniform1i(shaderProgram3D.viewAnchor, viewAnchor);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, rectBuffer);
     gl.vertexAttribPointer(shaderProgram3D.vertexPositionAttribute, 
@@ -688,6 +693,11 @@ function handleCheckboxClickColor(event) {
     updateScene3D();
 }
 
+function handleCheckboxClickAnchor(event) {
+    viewAnchor = checkboxAnchor.checked;
+    updateScene3D();
+}
+
 function webGLStart() {
     canvas = document.getElementById("mandelbox-canvas");
     initGL(canvas);
@@ -720,9 +730,11 @@ function webGLStart() {
     checkboxJuliabox = document.getElementById("toggle-juliabox");
     checkboxSlicer = document.getElementById("toggle-slicer");
     checkboxColor = document.getElementById("toggle-color");
+    checkboxAnchor = document.getElementById("toggle-anchor");
     checkboxJuliabox.onclick = handleCheckboxClickJuliaBox;
     checkboxSlicer.onclick = handleCheckboxClickSlicer;
     checkboxColor.onclick = handleCheckboxClickColor;
+    checkboxAnchor.onclick = handleCheckboxClickAnchor;
 
     // Avoid double click selecting text.
     $("body").disableSelection();
