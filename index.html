@@ -36,7 +36,8 @@
     }
 
     section {
-        border-top: 1px solid silver;
+        border-top: 2px solid silver;
+        padding-bottom: 10px; 
     }
 }  
 </style>
@@ -54,99 +55,205 @@
     \(
         \newcommand{\iter}[2]{{#1}^{[#2]}}
         \newcommand{\mboxset}{M_{n,\mu}}
+        \newcommand{\jboxset}[1]{J_{n,\mu, #1}}
         \newcommand{\itfnv}{T_{\mu,\vec{v}}}
+        \newcommand{\itfnc}{T_{\mu,\vec{c}}}
         \newcommand{\itfnx}{T_{\mu,x_0}}
         \newcommand{\bfold}{F_{box}}
         \newcommand{\sfold}{F_{ball}}
         \newcommand{\implies}{\Rightarrow}
         \newcommand{\orbit}[1]{\left\{ \iter{#1}{n} \right\}}
+        \newcommand{\setR}{\mathbb{R}}
+        \newcommand{\norm}[1]{\|#1\|}
     \)
 
+    <h1>The Mandelbox Set</h1>
+
+    The Mandelbox set is a mathematical set defined by iterations of points on a plane by a family of function \( T_\mu \), much like the famous Mandelbrot set after which its name is derived. The set can easily be generalized to any number of dimension and different values for the scale parameter \( \mu \) can lead to a wide range of different patterns. While popular is the fractal art communities, it has not yet been formally studied. In this project, created as part of Winter 2014's PMATH 370 course at University of Waterloo, I prove some basic properties of the Mandelbox set and provide a WebGL applet to navigate the 2D and 3D versions of this fractal.
+    <p>
+    <center><a href="explorer.html"><img src="pics/explorer1.png" width="600" /></a><br/><em>Mandelbox370 Fractal Explorer, requires WebGL-compatible browser and relatively recent (though not neccessarily fast) graphics card.</em></center>
+    <br/><br/>
+
     <section>
-        <a name="introduction"></a>
-        <h1>Introduction</h1>
+        <a name="background"></a>
+        <h1>Background</h1>
+
+        In 1980, Benoit Mandelbrot generated the first image of the Mandelbrot set while working at IBM. Soon after, in parallel with advances in computing, countless fractal-generating software were written which lead to the development of an entire new genre of art, fractal art. Common example of such fractals include the Mandelbrot and Julia Sets, fractal flames, the Burning Ship, etc.
+        <p>
+        As the field of computer graphics made further advances, many became interested in visualizing three-dimensional fractals. While fractals such as the Sierpenski triangle were easy to generalize into tetrahedra, finding a formula that would create a 3D structure with the complexity of the Mandelbrot was not trivial. Various search attempts are highlighted in <a href="http://www.skytopia.com/project/fractal/mandelbrot.html">Daniel White's website</a> (2008).
+        <p>
+        <a href="http://www.skytopia.com/project/fractal/mandelbulb.html">The discovery of the Mandelbulb</a> in 2009 by Daniel White and Paul Nylander, a non-trivial 3D fractal, spurred hobbyist research into finding new fractal formulas, traces of which can be found on the <a href="http://www.fractalforums.com/">fractalforums</a> website. The main focus of this project is on the Mandelbox set found in 2010 by Tom Lowe, which <a href="http://www.fractalforums.com/3d-fractal-generation/sierpinski-like-fractals-using-an-iterative-function/">began</a> as research into an iterative form of Sierpenski fractals, continuing <a href="http://www.fractalforums.com/3d-fractal-generation/continuous-conformal-mandelbrots/">here</a> and culminating <a href="http://www.fractalforums.com/3d-fractal-generation/amazing-fractal/">here</a>. See <a href="https://sites.google.com/site/mandelbox/what-is-a-mandelbox">Tom Lowe's website</a>.
+        <p>
+        The particular interest of the Mandelbox is that it is the first to introduces some ideas (namely, plane inversion) that form the basis for a type of fractal formula that appear to be highly general, capable of creating well-known fractals (e.g., koch curve) by simple changes in their parameter. This is detailed in the section Kaleidoscopic Fractals.
+        <p>
+        But first, we need to define the Mandelbox set.
+    </section>
+
+    <section>
+        <a name="definitions"></a>
+        <h1>Definitions</h1>
+        The Mandelbox set is similar to the Mandelbrot set. It is defined as the set of points who remain bounded under iteration under some function \( T_\mu \). That function, however, is somewhat more complicated than \( x^2 + c \), as it is composed of two subfunctions \( \bfold, \sfold \).
+        <p>
+        <b>Definition (Box Fold): A box fold, or plane inversion is defined as \( \bfold(x) = \begin{cases} -2 - x & x < -1 \\ x & -1 \leq x \leq 1 \\ 2 - x & x > 1 \end{cases} \) when \( x \in \setR \) and \( \bfold(x_1, x_2, ..., x_n) = (\bfold(x_1), \bfold(x_2), ..., \bfold(x_n)) \) for \( \setR^n \).</b>
+        <p>
+        This function can be thought of as "folding" the plane along the edges of a square centered at (0, 0) with side length 2. Note that the box could have different dimensions, but the standard Mandelbox set uses length 2, so we restrict our attention to this particular definition of the function.
+        <p>
+        <b>Definition (Ball Fold): Let \( \vec{x} \in \setR^n \). A circle/sphere/ball fold, or circle/sphere/ball inversion, is defined as \( \sfold(\vec{x}) = \begin{cases} 4\vec{x} & \norm{\vec{x}} < \frac{1}{2} \\ \vec{x} / \norm{\vec{x}}^2 & \frac{1}{2} < \norm{\vec{x}} < 1 \\ \vec{x} & \norm{\vec{x}} \geq 1 \end{cases} \)</b>
+        <p>
+        The ball fold transformation expands the inside of a sphere of radius 1. Note that the first case, \( \norm{\vec{x}} < \frac{1}{2} \) is present mostly to prevent the function from "blowing up" for points near \( \vec{0} \). The constant \( \frac{1}{2} \) could be different, we focus our attention on this "default" value and our proofs work for any value < 1. The ball fold transformation is similar to the sphere inversion operations used by [Jos Leys, 2006] to create circle-packing type fractals.
+        <p>
+        Note that both functions are continuous. These two functions may appear ad-hoc and difficult to understand. Fortunately, Tom Lowe <a href="http://vimeo.com/9745981">created a short video</a> that allow us to visualize these two operations when operated on a plane.
+        <p>
+        With this, we can construct the function \( \itfnv(\vec{x}) = \mu \sfold(\bfold(\vec{x})) + \vec{v} \) and are ready to give the definition of the Mandelbox set. The constant \( \mu \) is refered to as the <em>scale parameter</em> of the Mandelbox.
+        <p>
+        <b>Definition (Mandelbox set): The n-dimensional Mandelbox Set \( \mboxset \) with scale parameter \( \mu \) is defined as \( \mboxset = \{ \vec{v} \in \setR^n\ |\ \iter{\itfnv}{k}(0) \not\to \infty \} \), where \( \itfnv(\vec{x}) = \mu \sfold(\bfold(\vec{x})) + \vec{v} \).</b>
+        <p>
+        We refer to \( \mboxset, \mu > 0 \) as <em>positive boxes</em> and \( \mboxset, \mu < 0 \) as <em>negative boxes</em>. Furthermore, we can easily obtain a definition of "Juliaboxes".
+        <p>
+        <b>Definition (Juliabox set): The n-dimensional Juliabox Set \( \mboxset \) with scale parameter \( \mu \) with constant \( \vec{c} \) is defined as \( \jboxset = \{ \vec{v} \in \setR^n\ |\ \iter{\itfnc}{k}(\vec{v}) \not\to \infty \} \), where \( \itfnc(\vec{x}) = \mu \sfold(\bfold(\vec{x})) + \vec{c} \).</b>
+        <p>
+        These definitions can be complicated to work with, especially in higher dimensions when the number of components increases. Therefore, it is useful to study \( \itfnv \) as it operates on each component of a vector individually. This works well with \( \bfold \), which operates on each component/dimension independently. For \( \sfold \), this is not the case. However, note that if \( x_k \) is the kth component of \( \vec{x} \), then the kth component of \( \sfold(\vec{x}) \) is \( c \cdot x_k \) for some \( 1 < c < 4 \). We can use such simplifications in most of our proofs.
+        <p>
+        Thus, in the proofs that follow, I will often use the notations \( \bfold(x), \sfold(x), x \in \setR \) to study the behavior of a single component while working in higher dimensions.
+        <p>
+        Finally, from the definition of the Mandelbox set, we can easily see that it is symmetric along any axis (it has all the symmetries of a square/cube/box).
+        <p>
+        <!--Other trivial properties :
+        <br />
+        \( \norm{\vec{x}} \geq \norm{\bfold(\vec{x})} \)
+        <br />
+        \( \norm{\vec{x}} \geq \norm{\sfold(\vec{x})} \)-->
     </section>
 
     <section>
         <a name="bounds"></a>
         <h1>Bounds</h1>
-        <b>Theorem (Bounds for negative boxes): Let \( M_{n,\mu} \) be the Mandelbox Set in \( \mathbb{R}^n \) with scale parameter \( \mu < 0 \). Let \(\ \vec{v} = (v_1,...v_n) \in \mathbb{R}^n \). If \( |\max(v_1,...,v_n)| > 2 \), then \( \vec{v} \not\in M_{n,\mu} \).</b>
+        For the Mandelbrot set, we know that if any point in the orbit exceeds the boundaries of a circle of radius 2 centered at the origin while iterating, then the point will diverge to infinity. This property is particularly useful when rendering the Mandelbrot using escape-time algorithms. We would like to obtain a similar bound for the Mandelbox set.
+        <p>
+        First, we ignore the Mandelbox for \( |\mu| < 1 \). These boxes are not interesting, since none of the points diverge to infinity. To see this, note that \( \norm{\vec{x}} \geq \norm{\bfold(\vec{x})} \), so box fold cannot cause the point to diverge. Sphere fold only increases the value of points inside a sphere of radius 1 by at most a factor of 4, so sphere fold cannot cause the value of points to diverge. Only multiplication by \( \mu \) can (adding the constant is offset by the fact that \( |\mu| < 1 \).
+        <center><img src="pics/negativebox141.png" /><br/><em>2D Mandelbox, scale -1.41</em></center>
+        <p>
+        Using the applet to render 2D mandelboxes for \( \mu < 1 \), we notice that all boxes appear to have length 4. This can be proven.
+        <p>
+        <b>Theorem (Bounds for negative boxes): Let \( \mboxset \) be the Mandelbox Set in \( \mathbb{R}^n \) with scale parameter \( \mu < -1 \). Let \(\ \vec{v} = (v_1,...v_n) \in \mathbb{R}^n \). If \( |\max(v_1,...,v_n)| > 2 \), then \( \vec{v} \not\in M_{n,\mu} \).</b>
         <p>
         Proof : Suppose \( x = \max(v_1,...,v_n) \). We start by considering the case \( x > 2 \). 
         <p>
-        The first iteration will involve a box fold, so we have that \( F_{box}(x) = 2-x, F_{ball}(F_{box}(x)) = c(2-x), c > 1 \). Therefore, \( T_\mu(x) = \mu F_{ball}(F_{box}(x)) + x > x \) as both \( \mu \) and \( c(2-x) \) are negative. Similarly, \( T_\mu^{[2]}(x) = T_\mu(T_\mu(x)) > T_\mu(x) \) and generally, \(T_\mu^{[n+1]}(x) > T_\mu^{[n]}(x) \).
-        <p>
-        Thus, \( \{T_\mu^{[n]}(x) \} \) is an monotonically increasing sequence. It is also not bounded since \( T_\mu^{[n+1]}(x)-T_\mu^{[n]}(x) = \mu F_{ball}(F_{box}(T_\mu^{[n]}(x))) \) increases with \( n \). Hence, \( T_\mu^{[n]}(x) \to \infty \) so \( T_\mu^{[n]}(v) \to \infty \) also which by definition means \( \vec{v} \not\in \mathbb{R}^n \).
-        <p>
-        The proof for the case where \( x < -2 \) is similar. Now, \( F_{box}(x) = -2-x > 0 \) so \( T_\mu(x) = \mu F_{ball}(F_{box}(x)) + x < x \) and we get that \( \{T_\mu^{[n]}(x) \} \) is an unbounded monotonically decreasing sequence.
-        <p>
-        Since in both cases, \( T_\mu^{[n]}(x) \to -\infty \ \text{or} \ +\infty \), we must have that \( |\vec{v}| \to \infty \Rightarrow \vec{v} \not\in M_{n,\mu} \).
+        The first iteration will involve a box fold, so we have that \( F_{box}(x) = 2-x, F_{ball}(F_{box}(x)) = c(2-x), c > 1 \). Both \( \mu \) and \( c(2-x) \) are negative, so  \( \mu c(2-x) > 0 \). Therefore we have :
 
-        </br>
+        \[ \itfnv(x) = \mu F_{ball}(F_{box}(x)) + x = \mu c(2-x) + x > x \]
+        Similarly, \( \itfnv^{[2]}(x) = \itfnv(\itfnv(x)) > \itfnv(x) \) and generally, \(\itfnv^{[n+1]}(x) > \itfnv^{[n]}(x) \).
+        <p>
+        Thus, \( \{\itfnv^{[n]}(x) \} \) is an monotonically increasing sequence. It is also not bounded since \( \itfnv(x) > x \) is true for all \( x > 2 \). Hence, \( \itfnv^{[n]}(x) \to \infty \) so \( \itfnv^{[n]}(\vec{v}) \to \infty \) also which by definition means \( \vec{v} \not\in \mboxset \).
+        <p>
+        The proof for the case where \( x < -2 \) is similar. Now, \( F_{box}(x) = -2-x > 0 \) so \( \itfnv(x) = \mu F_{ball}(F_{box}(x)) + x < x \) and we get that \( \{\itfnv^{[n]}(x) \} \) is an unbounded monotonically decreasing sequence.
+        <p>
+        Since in both cases, \( \itfnv^{[n]}(x) \to -\infty \ \text{or} \ +\infty \), we must have that \( |\vec{v}| \to \infty \Rightarrow \vec{v} \not\in M_{n,\mu} \).
+        <br />
+        <p align="right">\( \blacksquare \)</p>
 
-        <b>Corollary: For \( \mu < 0 \), the smallest box that contains every point in \( M_{n,\mu} \) is \( \underbrace{[-2,2] \times [-2,2] ... \times [-2,2]}_n \)</b>
+        <b>Corollary: For \( \mu < -1 \), the smallest box that contains every point in \( M_{n,\mu} \) is \( \underbrace{[-2,2] \times [-2,2] ... \times [-2,2]}_n \)</b>
         <p>
         Proof : To show this, we simply need to find a point \( \vec{v} \in M_{n,\mu} \) on each boundary of that box. Consider \( \vec{v} = (2, 0, ..., 0) \). Then 
 
         \[ \begin{align*}
-        T_\mu(\vec{v}) &= \mu F_{ball}(F_{box}((2, 0, ..., 0)) + \vec{v} \\
+        \itfnv(\vec{v}) &= \mu F_{ball}(F_{box}((2, 0, ..., 0)) + \vec{v} \\
                        &= \mu F_{ball}((0, 0, ..., 0)) + \vec{v} \\
                        &= \mu(0, 0, ..., 0) + \vec{v} = \vec{v}
         \end{align*} \] 
 
         So \( \vec{v} \) is a fixed point, which is bounded. Similarly, every other point at the center of every face of the box is a fixed point.
+        <p align="right">\( \blacksquare \)</p>
 
-        </br>
+        <center><img src="pics/positivebox2.png" /><br/><em>2D Mandelbox, scale 2</em></center>
+        <p>
+        For positive boxes, the bounds on the box vary with the scale parameter \( \mu \). We can also derive those bounds.
+        </p>
 
-        <em>
-        <b>Theorem (Bounds for positive boxes)</b>: Let \( M_{n,\mu} \) be the Mandelbox Set in \( \mathbb{R}^n \) with scale parameter \( \mu > 1 \). Let \(\ \vec{v} = (v_1,...v_n) \in \mathbb{R}^n \). If \( |\max(v_1,...,v_n)| > \frac{2(\mu+1)}{\mu-1} \), then \( \vec{v} \not\in M_{n,\mu} \).</em>
+        <b>Theorem (Bounds for positive boxes): Let \( M_{n,\mu} \) be the Mandelbox Set in \( \mathbb{R}^n \) with scale parameter \( \mu > 1 \). Let \(\ \vec{v} = (v_1,...v_n) \in \mathbb{R}^n \). If \( |\max(v_1,...,v_n)| > \frac{2(\mu+1)}{\mu-1} \), then \( \vec{v} \not\in M_{n,\mu} \).</b>
         <p>
         Proof : Again, suppose \( x = \max(v_1,...,v_n) \) and begin with the case \( x > \frac{2(\mu+1)}{\mu-1} \). First, notice \( \frac{2(\mu+1)}{\mu-1} > 2 \) so the first iteration will involve a box fold :
         \[ 
         \begin{align*}
-        T_\mu(x) &= \mu F_{ball}(F_{box}(x)) + x \\
+        \itfnv(x) &= \mu F_{ball}(F_{box}(x)) + x \\
                  &= \mu F_{ball}(2-x) + x \\
                  &< \mu(2-x) + x & \text{since } (2-x) \text{ is negative} \\
                  &= 2\mu - x(\mu-1) & (1) \\
-                 &< 2\mu - 2(\mu+1) & \text{by assumption} \\
+                 &< 2\mu - 2(\mu+1) & \text{by assumption } x > \frac{2(\mu+1)}{\mu-1} \\
                  & = -2
         \end{align*}
         \]
-        Since \( T_\mu(x) < -2 \), the second iteration \( T_\mu(T_\mu(x)) \) will also involve a box fold on the other side.
+        Since \( \itfnv(x) < -2 \), the second iteration \( \itfnv(\itfnv(x)) \) will also involve a box fold on the other side.
         \[
         \begin{align*}
-        T_\mu(x)^{[2]} &= \mu F_{ball}(F_{box}(T_\mu(x))) + x \\
-                       &= \mu F_{ball}(-2-T_\mu(x)) + x \\
-                       &> \mu(-2-T_\mu(x)) + x  & \text{since }-2-T_\mu(x) \text{ is positive} \\
+        \itfnv(x)^{[2]} &= \mu F_{ball}(F_{box}(\itfnv(x))) + x \\
+                       &= \mu F_{ball}(-2-\itfnv(x)) + x \\
+                       &> \mu(-2-\itfnv(x)) + x  & \text{since }-2-\itfnv(x) \text{ is positive} \\
                        &> \mu(-2-(2\mu - x(\mu-1))) + x & \text{from } (1) \\
                        &= -2\mu-\mu(2\mu - x(\mu-1)) + x \\
                        &= -2\mu - 2\mu^2 + x\mu(\mu-1) + x \\
                        &= -2\mu(\mu+1) + x(\mu^2-\mu+1) \\
-                       &> -x\mu(\mu-1) + x(\mu^2-\mu+1) & \text{by assumption} \\
+                       &> -x\mu(\mu-1) + x(\mu^2-\mu+1) & \text{by assumption } x > \frac{2(\mu+1)}{\mu-1} \\
                        &=x(-\mu^2+\mu+\mu^2-\mu+1) = x
         \end{align*}
         \]
-        Hence, if \(x > \frac{2(\mu+1)}{\mu-1} \), \( T_\mu(x)^{[2]}(x) > x \). Using a similar method, we can also get that if \(x < -\frac{2(\mu+1)}{\mu-1} \), \( T_\mu(x)^{[2]}(x) < x \). Thus, by combining the two, we see that \( \{|T_\mu^{[n]}(x)| \} \) is a monotonically increasing sequence, and cannot be bounded.
+        Hence, if \(x > \frac{2(\mu+1)}{\mu-1} \), \( \itfnv(x)^{[2]}(x) > x \). Using a similar method, we can also get that if \(x < -\frac{2(\mu+1)}{\mu-1} \), \( \itfnv(x)^{[2]}(x) < x \). Thus, by combining the two, we see that \( \{|\itfnv^{[n]}(x)| \} \) is a monotonically increasing sequence, and cannot be bounded.
         <p>
         Hence \( |\vec{v}| \to \infty \Rightarrow \vec{v} \not\in M_{n,\mu} \) as needed.
 
-        </br>
+        <p align="right">\( \blacksquare \)</p>
 
-        <b>Conjecture: For \( \mu > 1 \), the smallest box that contains every point in \( M_{n,\mu} \) is \( \underbrace{[-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}] \times [-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}] ... \times [-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}]}_n \)</b>
+        <b>Theorem: For \( 1 < \mu \leq 4\sqrt{n} + 1 \), the smallest box that contains every point in \( M_{n,\mu} \) is \( \underbrace{[-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}] \times [-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}] ... \times [-\frac{2(\mu+1)}{\mu-1},\frac{2(\mu+1)}{\mu-1}]}_n \)</b>
         </br>
+        <p>
+        Proof : We show this by proving that the corners of this box are eventually periodic points of period 2. We do this for the corner when all the components are positive - the proof is the same for the other corners. That is, if \( \vec{v} = (\frac{2(\mu+1)}{\mu-1}, ..., \frac{2(\mu+1)}{\mu-1}) \), then \( \iter{\itfnv}{3}(\vec{0}) = \vec{0} \).
+        <p>
+        Note that \( \itfnv(0) = \frac{2(\mu+1)}{\mu-1} \). Then,
+        \[
+        \begin{align}
+            \iter{\itfnv}{2}(0) &= \itfnv(\frac{2(\mu+1)}{\mu-1}) \\
+                                &= \mu \sfold(\bfold(\frac{2(\mu+1)}{\mu-1})) + \frac{2(\mu+1)}{\mu-1} \\
+                                &= \mu \sfold(2 - \frac{2(\mu+1)}{\mu-1}) + \frac{2(\mu+1)}{\mu-1} & \text{since } \frac{2(\mu+1)}{\mu-1} > 1 \\
+                                &= \mu \sfold(\frac{2(\mu-1)}{\mu-1} - \frac{2(\mu+1)}{\mu-1}) + \frac{2(\mu+1)}{\mu-1} \\
+                                &= \mu \sfold(\frac{-4}{\mu-1}) + \frac{2(\mu+1)}{\mu-1} \\
+                                &= \frac{-4 \mu}{\mu-1} + \frac{2(\mu+1)}{\mu-1} & \text{no ball fold since } \mu \leq 4\sqrt{n} + 1 \\
+                                &= \frac{-4\mu + 2(\mu+1)}{\mu-1} \\
+                                &= \frac{2(-\mu+1)}{\mu-1} = -2 \\
+            \iter{\itfnv}{3}(0) &= \mu \sfold(\bfold(-2)) + \frac{2(\mu+1)}{\mu-1} \\
+                                &= \mu \sfold(0) + \frac{2(\mu+1)}{\mu-1} \\
+                                &= \frac{2(\mu+1)}{\mu-1} = \itfnv(0) \\
+        \end{align}
+        \]
+        Hence, \( \vec{v} \in \mboxset \).
+
+        <p align="right">\( \blacksquare \)</p>
+        <b>Conjecture: For \( 4\sqrt{n} + 1 < \mu \), \( \mboxset = \emptyset \).</b>
+
+        <p>
+        <center><img src="pics/positivebox532.png" /> <img src="pics/positivebox695.png" /><br/><em>2D Mandelbox corners, scale 5.32 and 6.95</em></center>
+        <p>
+        With high values of \( \mu \), we can still see some dust in the corners, which disappears when \( \mu > 4\sqrt{2} + 1 \approx 6.65 \)
     </section>
 
     <section>
-        <a name="observations"></a>
-        <h1>Observations</h1>
+        <a name="dimension"></a>
+        <h1>Dimension</h1>
+
+        We would like to be able to measure the dimension of this set for various values of \( \mu \). Unfortunately, this is rather difficult and I don't know how to approach this problem in the general case.
+        <p>
+        <center><img src="pics/positivebox175.png" /><br/><em>2D Mandelbox, scale 1.75</em></center>
+        <p>
+        However, we can observe that for small values of \( \mu \), the center of the box appears to be full. This gives us an easy way to get the dimension, since the dimension of the box must then be equal to the dimension of the center area.
+        <p>
+
         <b>Theorem (Interior of positive boxes): For \( 1 < \mu < 2 \), if \( \vec{v} \in \underbrace{[-k, k] \times [-k, k] \times ... \times [-k, k]}_n \) where \( k = \frac{2(\mu^2-\mu-2)}{1-\mu} \), then \( \vec{v} \in M_{n,\mu} \).</b>
         <p>
-        Proof : In this proof, we want show that the orbit of points in a cube centered at (0, 0) of some dimension under iteration by \( \itfnv \) is bounded. Again, it is sufficient to look at the behavior of a single component of a point \( p \), say \( x_0 \).
+        Proof : In this proof, we want show that the orbit of points in a cube centered at (0, 0) of some dimension under iteration by \( \itfnv \) is bounded. Again, it is sufficient to look at the behavior of a single component of a point \( \vec{v} \), say \( x_0 \).
         <p>
         We begin by looking at the range of \( \iter{\itfnx}{n}(I) \) for some interval \( I = [a, b] \).
         <p>
         \(
-        \newcommand{\since}{\ \text{since}\ }
+        \newcommand{\since}{\quad\text{since}\ }
         (1)\ \itfnx([0,1]) \subseteq [x_0, 2\mu+x_0] \since \bfold([0,1]) = [0,1], \sfold([0,1]) = [0,2] \\
         (2)\ \itfnx([1,2]) \subseteq [x_0, 2\mu+x_0] \since \bfold([1,2]) = [0,1], \sfold([0,1]) = [0,2] \\
         (3)\ \itfnx([2,3]) \subseteq [-2\mu+x_0, x_0] \since \bfold([2,3]) = [-1,0], \sfold([-1,0]) = [-2,0] \\
@@ -156,10 +263,10 @@
         (7)\ \itfnx([-3,-2]) \subseteq [x_0, 2\mu+x_0] \since \bfold([-3,-2]) = [0,1], \sfold([0,1]) = [0,2] \\
         (8)\ \itfnx([a,-3]) \subseteq [\mu+x_0, \mu(-2-a)+x_0], a < -3 \since \bfold([a,-3]) = [1,-2-a], \sfold([1,-2-a]) = [1,-2-a]
         \)
-
+        <p>
         In order to show that we have points inside the Mandelbox, we need to find initial values \( x_0 \) such that the orbit \( \orbit{\itfnx(x_0)} \) is bounded.
         <p>
-        Suppose \( x_0 > 0 \). Notice that in the ranges \( (1)--(8) \), the maximum value of \( \itfnx(I) \) is \( 2\mu+x_0 \) except for \( (8) \) which has maximum value \( \mu(-2-a)+x_0 \). In order for \( \iter{\itfnx}{n} \) to diverge, we need \( \iter{\itfnx}{n}(x_0) \in [a, -3] \) for some \( n \), so we need \( a \) such that
+        Suppose \( x_0 > 0 \). Notice that in the ranges \( (1)-(8) \), the maximum value of \( \itfnx(I) \) is \( 2\mu+x_0 \) except for \( (8) \) which has maximum value \( \mu(-2-a)+x_0 \). In order for \( \iter{\itfnx}{n} \) to diverge, we need \( \iter{\itfnx}{n}(x_0) \in [a, -3] \) for some \( n \), so we need \( a \) such that
         \[
         \begin{align*}
                  & \mu(-2-a)+x_0 &>& 2\mu+x_0 \\
@@ -169,7 +276,7 @@
         \end{align*}
         \]
 
-        The ranges \( (1)--(8) \) have minimum value \( -2\mu+x_0 \) except for \( (4) \) which has minimum value \( \mu(2-b)+x_0 \). Thus, in order to get \( \iter{\itfnx}{n}(x_0) < -4 \), we need \( \iter{\itfnx}{n-1}(x_0) \in [3, b] \) so we need \( b \) such that
+        The ranges \( (1)-(8) \) have minimum value \( -2\mu+x_0 \) except for \( (4) \) which has minimum value \( \mu(2-b)+x_0 \). Thus, in order to get \( \iter{\itfnx}{n}(x_0) < -4 \), we need \( \iter{\itfnx}{n-1}(x_0) \in [3, b] \) so we need \( b \) such that
         \[
         \begin{align*}
                  & \mu(2-b)+x_0 &<& \iter{\itfnx}{n}(x_0) < -4 \\
@@ -179,7 +286,7 @@
         \end{align*}
         \]
 
-        However, note that since the iteration always starts at \( x_0 \), cases \( (4), (8) \) will never occur if the required value \( 2 + \frac{x_0+4}{\mu} \) is larger than the maximum value range \( 2\mu+x_0 \) of the remaining cases. Therefore the orbit \( \orbit{\itfnx(x_0)} \) will be bounded  by \( 2\mu+x_0 \) if
+        However, note that since the iteration always starts at \( x_0 \), cases \( (4), (8) \) will never occur if the required value \( 2 + \frac{x_0+4}{\mu} \) is larger than the maximum value \( 2\mu+x_0 \) of the remaining cases. Therefore the orbit \( \orbit{\itfnx(x_0)} \) will be bounded  by \( 2\mu+x_0 \) if
 
         \[
         \begin{align*}
@@ -195,14 +302,23 @@
 
         <p>
 
-        This shows there exist a n-cube of half-length \( 2\frac{\mu^2-\mu-2}{1-\mu} \) centered at \( (0, 0) \) where every point in the cube is in \( \mboxset, 1 < \mu < 2 \). Q.E.D.
+        This shows there exist a n-cube of half-length \( 2\frac{\mu^2-\mu-2}{1-\mu} \) centered at \( (0, 0) \) where every point in the cube is in \( \mboxset, 1 < \mu < 2 \).
+
+        <p align="right">\( \blacksquare \)</p>
 
         <b>Corollary: If \( 1 < \mu < 2 \), then \( \mboxset \) has box-counting dimension \( n \).</b>
         <p>
         Proof : The n-cube in the middle has box-counting dimension \( n \).
 
-        <b>Theorem (Interior of negative boxes): For \( -2 < \mu < -1 \), if \( \vec{v} \in \underbrace{[-k, k] \times [-k, k] \times ... \times [-k, k]}_n \) where \( k = 4+2\mu \), then \( \vec{v} \in M_{n,\mu} \).</b>
+        <p align="right">\( \blacksquare \)</p>
 
+        <center><img src="pics/negativebox161.png" /><br/><em>2D Mandelbox, scale -1.61</em></center>
+        <p>
+        For negative boxes, we can also observe that for some values of \( \mu \), there exists a solid interior.
+        <p>
+
+        <b>Theorem (Interior of negative boxes): For \( -2 < \mu < -1 \), if \( \vec{v} \in \underbrace{[-k, k] \times [-k, k] \times ... \times [-k, k]}_n \) where \( k = 4+2\mu \), then \( \vec{v} \in M_{n,\mu} \).</b>
+        <p>
         The proof is similar to the one for the interior of positive boxes. First we look at the range of \( \iter{\itfnx}{n}(I) \) for some interval \( I = [a, b] \), which is just the reverse of what we had previously.
         <p>
         \(
@@ -215,7 +331,7 @@
         (7)\ \itfnx([-3,-2]) \subseteq [2\mu+x_0, x_0] \\
         (8)\ \itfnx([a,-3]) \subseteq [\mu(-2-a)+x_0, \mu+x_0], a < -3
         \)
-
+        <p>
         Again, we look for initial values \( x_0 \) such that the orbit \( \orbit{\itfnx(x_0)} \) is bounded. Suppose \( x_0 > 0 \). Notice that the maximum value of \( \itfnx(I) \) is \( -2\mu+x_0 \) except for \( (4) \) which has maximum value \( \mu(2-b)+x_0 \). To get divergence, we need
         \[
         \begin{align*}
@@ -244,24 +360,123 @@
 
         <p>
 
-        Hence there exist a n-cube of half-length \( 4+2\mu \) centered at \( (0, 0) \) where every point in the cube is in \( \mboxset, -2 < \mu < -1 \). Q.E.D.
+        Hence there exist a n-cube of half-length \( 4+2\mu \) centered at \( (0, 0) \) where every point in the cube is in \( \mboxset, -2 < \mu < -1 \).
 
-        <p>
+        <p align="right">\( \blacksquare \)</p>
 
         <b>Corollary: If \( -2 < \mu < -1 \), then \( \mboxset \) has box-counting dimension \( n \).</b>
         <p>
         Proof : The n-cube in the middle has box-counting dimension \( n \).
+        <p align="right">\( \blacksquare \)</p>
+
+        <b>Conjecture: For \( |\mu| > 2 \), the Mandelbox set is totally disconnected (dust-like).</b>
+        <p>
+        <center><img src="pics/positivebox3zoom.png" /><br/><em>2D Mandelbox zoom, scale 3, 8 iterations</em></center>
+        <p>
+
     </section>
 
     <section>
         <a name="applet"></a>
         <h1>Applet</h1>
-        <a href="explorer.html">Explorer</a>
+        As with most fractals, the fun part is exploring it. Hence, I have created a not-subtly titled Mandelbox370 WebGL applet to do just that. The source code, along with the rest of this website, <a href="https://github.com/rudi-c/mandelbox370">can be found on Github</a>.
+        <p>
+        <center><a href="explorer.html"><img src="pics/explorer2.png" width="600" /></a><br/><em>Mandelbox370 Fractal Explorer. Interesting shapes can be found inside, such as this monkey helmet.</em></center>
+        <p>
+        <b>Browser notes:</b> This applet uses WebGL and thus, requires a WebGL-compatible browser. This includes Chrome v33 or higher. On Windows, Firefox (as of v28) will take over a minute to compile the shaders and freeze in the meantime. Can't get it to work on IE 11 yet. Not tested on other browsers.
+        <p>
+        <b>Graphics notes:</b> Unsurprisingly, a raytraced 3D fractal is quite graphics-intensive. On default parameters, a regular ultrabook integrated intel chip (e.g., HD 3000) should be able to run this at a reasonable framerate, but a dedicated graphics card is recommended. The graphics card does need to be relatively new (preferably 2012+, Sandy Bridge HD 2000 is too old for instance) - raytracing isn't a typical use of pixel shaders and falls more into GPGPU domain.
+        <p>
+        <b>Mathematics notes:</b> The 2D view represents the 2D mandelbox based on the number of iterations before the orbit escapes and black represents points which do not escape, which is an accurate representation of the fractal. However, the 3D fractal is not generated straight from the definition and uses an approximation with unproven accuracy. The images are to be interpreted with a grain of salt.
+        <p>
+        <h3>Usage Guide</h3>
+        <p>
+        <center><img src="pics/guide.png" width="600" /><br/></center>
+        <p>
+        <b>(1)</b> The 3D view allows you to navigate the 3D Mandelbox set. The red dot in the center represents the anchor of rotation. Initially, it is centered at the origin, but you can double-click anywhere on the fractal to change the anchor. This is useful for navigating specific parts of the fractal - e.g., the inside. The blue plane that cuts through the Mandelbox is the slicing plane, which renders a 2D Mandelbox in (4).
+        <p>
+        <b>(2)</b> The sliders allow you to adjust various parameters. The number of Iterations the amount of detail on the fractal. For the 3D view, this usually only needs to be increased around \( \mu = -1.5 \). The Scale Factor is the value of \( \mu \). The Slice Location controls the (blue) slicing plane. The accuracy controls the amount of detail in the 3D render. Adjust only as you zoom in. The more accurate the fractal, the most foam/dust-like and the more light it traps. Increasing it too much will cause the fractal to be completely black.
+        <p>
+        <b>(3)</b> View Slicing Plane and View Anchor are there for convenience. View Juliabox changes the 3D view to Juliabox Mode. The 2D view stays in Mandelbox Mode and a red dot appears allowing you to select the constant \( c \) for the Juliabox (along with the slicing plane). View Color adds some color loosely based on escape-time, which can be pretty sometimes and add contrast but really doesn't mean anything.
+        <p>
+        <b>(4)</b> The 2D view represents a slice of the 3D Mandelbox. It is rendered using escape-time coloring, and black dots represents points in the set. Can zoom in and pan.
+        <p>
+        <h3>Rendering Algorithm</h3>
+        <p>
+        Rendering the 2D Mandelbox is rather trivial and is done using the same techniques as every other 2D fractal. It gets more complex as we get to 3D - if we want real-time rendering while still having sufficient details on the surface of the fractal, we can't compute the whole fractal with voxels. Although this was shown to be possible with Octrees in [Crassin et al., 2009], this implementing voxel rendering on the GPU is very complicated.
+        <p>
+        Fortunately, an approach pioneered in [Hart and al., 1989] which is commonly refered to nowadays as <a href="http://blog.hvidtfeldts.net/index.php/2011/06/distance-estimated-3d-fractals-part-i/">distance</a> <a href="http://iquilezles.org/www/articles/distancefractals/distancefractals.htm">estimation</a> allows a speedy, real-time implementation. The idea behind this approach is to find a function \( d(\vec{v}) \) that gives an estimate of the distance to the closest point in \( \mboxset \) from \( \vec{v} \not\in \mboxset \).
+        <p>
+        How might we find such a function? The idea is similar to the approach used for smooth coloring on the Mandelbrot [Barrallo and al., 1999]. The observation is that points closer to the fractal will take longer to escape to infinity. Alternatively, the further a point \( \vec{v} \) is to the fractal, the farther \( \iter{T_\mu}{n}(\vec{v}) \) will be. For the Mandelbox, the formulas commonly used are used mostly because they happen to look good. Mikael Hvidtfeldt makes some <a href="http://blog.hvidtfeldts.net/index.php/2011/11/distance-estimated-3d-fractals-vi-the-mandelbox/">attempts </a> at providing an informal derivation of why the formulas would work, but I think there's still a lot of research to be done in the area.
+        <p>
+        However, suppose we do have such a function. How can we use it for rendering?
+        <p>
+        <center><img src="pics/distanceestimate.png" width="400" /><br/></center>
+        <p>
+        The picture above shows raytracing using distance estimation. More precisely, we are using <em>raymarching</em>. If we know the distance to the closest point on the fractal, we can always <em>march</em> the ray forward by that distance. We do this repeatedly until the ray is within \( \epsilon \) of the fractal, in which case we stop. We also set a timeout, a maximum number of steps to take.
+        <p>
+        This also gives us an easy way to shade the fractal without resorting to complicated light transportation techniques. We simply use the number of steps taken before reaching \( \epsilon \). This works because the number of steps taken roughly correlates with how much "stuff" is in the way blocking light. This does, however, generate some artifacts along the edges of the fractal.
+    </section>
+
+    <section>
+        <a name="kaleidoscopic"></a>
+        <h1>Kaleidoscopic Fractals (and future work)</h1>
+        <center><img src="pics/extra_temple.png" /><br/><em>The Mandelbox Temple</em></center>
+        <p>
+        In the introduction, I alluded to the idea that the Mandelbox has some interesting properties that allow it to be a highly "general" fractal. Indeed, we can observe a large variety of different shapes by simple changes of \( \mu \). Of particular interest is the Mandelbox at \( \mu = -1.5 \).
+        <p>
+        <center><img src="pics/magic_koch.png" width="300" /> <img src="pics/magic_sierpenski.png" width="300" /><br/>Koch Snowflake, Sierpenski<br/>
+        <img src="pics/magic_menger.png" width="300" /> <img src="pics/magic_circlepacking.png" width="300" /><br/>Menger Sponge, Circle Packing</center>
+        <p>
+        We see that, embedded in the -1.5 Mandelbox are simpler, well-known fractals. Properly rendered pictures by <a href="https://sites.google.com/site/mandelbox/negative-mandelbox">Tom Lowe</a> and <a href="http://www.miqel.com/fractals_math_patterns/mandelbox_3d_fractal.html">Miqel</a> provides even more shapes (fibonacci trees, cantor dust, L-system, etc).
+        <p>
+        Only a few months after the discovery of the Mandelbox, <a href="http://www.fractalforums.com/ifs-iterated-function-systems/kaleidoscopic-(escape-time-ifs)/">fractal artist "knighty"</a> took the idea of the Mandelbox's box fold and changed the symmetry planes in relation to regular polyhedra. This allowed the generation of sierpenski-like dodecahedron, and all forms of regular fractals.
+        <p>
+        <center><img src="pics/extra_trees.png" width="300" /> <img src="pics/extra_dodec.png" width="300" /><br/>Two examples of Kaleidoscopic IFS fractals from fractalforums.</center>
+        <p>
+        A year later, <a href="http://www.fractalforums.com/new-theories-and-research/very-simple-formula-for-fractal-patterns/">fractal artist Kali</a> changed the Mandelbox formula to \( K(\vec{v}) = abs(\vec{v})/\norm{\vec{v}} + \vec{c} \) where \( abs \) is applied component-wise.
+        <p>
+        <center><img src="pics/extra_kali1.png" width="400" /><br/>Kali's fractal.</center>
+        <p>
+        While the set itself is not very interesting, its "Julia" versions are, again, a highly generalized fractal.
+        <p>
+        <center><img src="pics/extra_kali2.png" width="300" /><img src="pics/extra_kali3.png" width="300" /><br/>Kali's fractal, "Julia" mode.</center>
+        <p>
+        Why do the Mandelbox and these Kaleidoscopic fractals generate or mimic so many others? As <a href="http://www.fractalforums.com/3d-fractal-generation/happy-birthday-mandelbox!">Tom Lowe's</a> describe, the formula of the Mandelbox scales, translates and rotates points around the plane (rotation happens after adding the constant \( \vec{c} \)). This corresponds to how most fractals are generated. To some extent, the parameters of the Mandelbox control the amount of scaling, translation and rotation that occurs.
+        <p>
+        Hence my interest in these fractal systems. I think it would be very interesting for these fractal systems to receive further mathematical research, so we can deepen our understanding on how Kaleidoscopic fractals generate other fractals.
+        <p>
     </section>
 
     <section>
         <a name="references"></a>
         <h1>References</h1>
+        IBM. Fractal Geometry. http://www-03.ibm.com/ibm/history/ibm100/us/en/icons/fractal/ Accessed 2014 March 23.
+        <p>
+        White, Daniel. The Mystery of the REAL, 3D Mandelbrot Fractal. March 2008. http://www.skytopia.com/project/fractal/mandelbrot.html Accessed 2014 March 23.
+        <p>
+        Aron, Jacob. The Mandelbulb : First 'True' 3D Image of Famous Fractal. November 2009. http://www.newscientist.com/article/dn18171-the-mandelbulb-first-true-3d-image-of-famous-fractal.html Accessed 2014 March 23.
+        <p>
+        Lowe, Tom. What is the Mandelbox. https://sites.google.com/site/mandelbox/what-is-a-mandelbox
+        <p>
+        Leys, Jos. Sphere Inversion Fractals. Computer and Graphics, Volume 29-3, June, 2005.
+        <p>
+        Hart, C. John et al. Ray Tracing Deterministic 3-D Fractals. Computer Graphics, Volume 23-3, July 1989.
+        <p>
+        Crassin, Cyril et al. GigaVoxels: Ray-Guided Streaming for Efficient and Detailed Voxel Rendering. Proceedings of the 2009 symposium on Interactive 3D graphics and games.
+        Barrallo, J., Jones, Damien M. Coloring Algorithms for Dynamical Systems in the Complex Plane. The University of the Basque Country
+        <p>
+        PMATH370 Lecture Notes, Kevin Hare. University of Waterloo, Winter 2014.
+        <p>
+        The artists on http://www.fractalforums.com/
+        <p>
+        Typesetting using <a href="http://www.mathjax.org/">MathJax</a>.
+        <br/>
+        Sticky menu using <a href="http://stickyjs.com/">StickyJS</a>.
+        <br/>
+        Ambient occlusion rendering borrowed from rrrola's <a href="http://sourceforge.net/projects/boxplorer/">Boxplorer</a> (which is also available in virtual reality mode for Occulus Rift, go check it out!).
+        <br/>
+        <a href="http://www.deviantart.com/">Deviantart</a> for inspiration - there are mindblowing Mandelbox renders out there! In comparison, what you see on my applet are like 1980s fractals.  
     </section>
 
 </div>  
@@ -270,7 +485,10 @@
     <h3>Contents</h3>
     <ul id="ul-list">
       <li>
-        <a href='#introduction'>Introduction</a>
+        <a href='#background'>Background</a>
+      </li>
+      <li>
+        <a href='#definitions'>Definitions</a>
       </li>
       <li>
         <a href='#bounds'>Bounds</a>
@@ -279,10 +497,10 @@
         <a href='#dimension'>Dimension</a>
       </li>
       <li>
-        <a href='#observations'>Observations</a>
+        <a href='#applet'>Applet</a>
       </li>
       <li>
-        <a href='#applet'>Applet</a>
+        <a href='#kaleidoscopic'>Kaleidoscopic</a>
       </li>
       <li>
         <a href='#references'>References</a>
