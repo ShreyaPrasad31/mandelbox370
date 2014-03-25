@@ -110,7 +110,7 @@
         <p>
         We refer to \( \mboxset, \mu > 0 \) as <em>positive boxes</em> and \( \mboxset, \mu < 0 \) as <em>negative boxes</em>. Furthermore, we can easily obtain a definition of "Juliaboxes".
         <p>
-        <b>Definition (Juliabox set): The n-dimensional Juliabox Set \( \mboxset \) with scale parameter \( \mu \) with constant \( \vec{c} \) is defined as \( \jboxset[\vec{c}] = \{ \vec{v} \in \setR^n\ |\ \iter{\itfnc}{k}(\vec{v}) \not\to \infty \} \), where \( \itfnc(\vec{x}) = \mu \sfold(\bfold(\vec{x})) + \vec{c} \).</b>
+        <b>Definition (Juliabox set): The n-dimensional Juliabox Set \( \mboxset \) with scale parameter \( \mu \) with constant \( \vec{c} \) is defined as \( \jboxset{\vec{c}} = \{ \vec{v} \in \setR^n\ |\ \iter{\itfnc}{k}(\vec{v}) \not\to \infty \} \), where \( \itfnc(\vec{x}) = \mu \sfold(\bfold(\vec{x})) + \vec{c} \).</b>
         <p>
         These definitions can be complicated to work with, especially in higher dimensions when the number of components increases. Therefore, it is useful to study \( \itfnv \) as it operates on each component of a vector individually. This works well with \( \bfold \), which operates on each component/dimension independently. For \( \sfold \), this is not the case. However, note that if \( x_k \) is the kth component of \( \vec{x} \), then the kth component of \( \sfold(\vec{x}) \) is \( c \cdot x_k \) for some \( 1 < c < 4 \). We can use such simplifications in most of our proofs.
         <p>
