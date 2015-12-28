@@ -6,16 +6,16 @@
 <script src="js/jquery-1.10.2.js"></script>
 <script src="js/jquery.sticky.js"></script>
 <script type="text/javascript"
-  src="https://c328740.ssl.cf1.rackcdn.com/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
 </script>
-  
+
 <style type="text/css">
     #sticky-menu {
         position: fixed;
         bottom: 0px;
         left: 0px;
-        padding-left: 8px; 
-        padding-right: 5px; 
+        padding-left: 8px;
+        padding-right: 5px;
         border-top: 1px solid #b2b2b2;
         border-right: 1px solid #b2b2b2;
         background: #e5e5e5;
@@ -23,8 +23,8 @@
     }
 
     #ul-list {
-        padding-left: 5px; 
-        padding-right: 5px; 
+        padding-left: 5px;
+        padding-right: 5px;
         list-style-type: none
     }
 
@@ -37,9 +37,9 @@
 
     section {
         border-top: 2px solid silver;
-        padding-bottom: 10px; 
+        padding-bottom: 10px;
     }
-}  
+}
 </style>
 
 <script>
@@ -137,7 +137,7 @@
         <p>
         <b>Theorem (Bounds for negative boxes): Let \( \mboxset \) be the Mandelbox Set in \( \mathbb{R}^n \) with scale parameter \( \mu < -1 \). Let \(\ \vec{v} = (v_1,...v_n) \in \mathbb{R}^n \). If \( |\max(v_1,...,v_n)| > 2 \), then \( \vec{v} \not\in M_{n,\mu} \).</b>
         <p>
-        Proof : Suppose \( x = \max(v_1,...,v_n) \). We start by considering the case \( x > 2 \). 
+        Proof : Suppose \( x = \max(v_1,...,v_n) \). We start by considering the case \( x > 2 \).
         <p>
         The first iteration will involve a box fold, so we have that \( F_{box}(x) = 2-x, F_{ball}(F_{box}(x)) = c(2-x), c > 1 \). Both \( \mu \) and \( c(2-x) \) are negative, so  \( \mu c(2-x) > 0 \). Therefore we have :
 
@@ -154,13 +154,13 @@
 
         <b>Corollary: For \( \mu < -1 \), the smallest box that contains every point in \( M_{n,\mu} \) is \[ \underbrace{[-2,2] \times [-2,2] ... \times [-2,2]}_n \]</b>
         <p>
-        Proof : To show this, we simply need to find a point \( \vec{v} \in M_{n,\mu} \) on each boundary of that box. Consider \( \vec{v} = (2, 0, ..., 0) \). Then 
+        Proof : To show this, we simply need to find a point \( \vec{v} \in M_{n,\mu} \) on each boundary of that box. Consider \( \vec{v} = (2, 0, ..., 0) \). Then
 
         \[ \begin{align*}
         \itfnv(\vec{v}) &= \mu F_{ball}(F_{box}((2, 0, ..., 0)) + \vec{v} \\
                        &= \mu F_{ball}((0, 0, ..., 0)) + \vec{v} \\
                        &= \mu(0, 0, ..., 0) + \vec{v} = \vec{v}
-        \end{align*} \] 
+        \end{align*} \]
 
         So \( \vec{v} \) is a fixed point, which is bounded. Similarly, every other point at the center of every face of the box is a fixed point.
         <p align="right">\( \blacksquare \)</p>
@@ -173,7 +173,7 @@
         <b>Theorem (Bounds for positive boxes): Let \( M_{n,\mu} \) be the Mandelbox Set in \( \mathbb{R}^n \) with scale parameter \( \mu > 1 \). Let \(\ \vec{v} = (v_1,...v_n) \in \mathbb{R}^n \). If \( |\max(v_1,...,v_n)| > \frac{2(\mu+1)}{\mu-1} \), then \( \vec{v} \not\in M_{n,\mu} \).</b>
         <p>
         Proof : Again, suppose \( x = \max(v_1,...,v_n) \) and begin with the case \( x > \frac{2(\mu+1)}{\mu-1} \). First, notice \( \frac{2(\mu+1)}{\mu-1} > 2 \) so the first iteration will involve a box fold :
-        \[ 
+        \[
         \begin{align*}
         \itfnv(x) &= \mu F_{ball}(F_{box}(x)) + x \\
                  &= \mu F_{ball}(2-x) + x \\
@@ -343,7 +343,7 @@
         \end{align*}
         \]
 
-        So know from the previous theorem on the bounds on negative boxes that we need \( x_0 < 2 \) for the point to be in \( \mboxset \). Therefore, we can only hit case \( (4) \) if after \( n \) iteration, \( \iter{\itfnx}{n}(x_0) > \frac{2\mu+x_0}{1+\mu} \). However, we know that in cases other than \( (4) \), the maximum value is \( -2\mu+x_0 \). Hence this will never happen if 
+        So know from the previous theorem on the bounds on negative boxes that we need \( x_0 < 2 \) for the point to be in \( \mboxset \). Therefore, we can only hit case \( (4) \) if after \( n \) iteration, \( \iter{\itfnx}{n}(x_0) > \frac{2\mu+x_0}{1+\mu} \). However, we know that in cases other than \( (4) \), the maximum value is \( -2\mu+x_0 \). Hence this will never happen if
 
         \[
         \begin{align*}
@@ -483,10 +483,10 @@
         <br/>
         Ambient occlusion rendering borrowed from rrrola's <a href="http://sourceforge.net/projects/boxplorer/">Boxplorer</a> (which is also available in virtual reality mode for Occulus Rift, go check it out!).
         <br/>
-        <a href="http://www.deviantart.com/">Deviantart</a> for inspiration - there are mindblowing Mandelbox renders out there! In comparison, what you see on my applet are like 1980s fractals.  
+        <a href="http://www.deviantart.com/">Deviantart</a> for inspiration - there are mindblowing Mandelbox renders out there! In comparison, what you see on my applet are like 1980s fractals.
     </section>
 
-</div>  
+</div>
 
 <div id='sticky-menu'>
     <h3>Contents</h3>
