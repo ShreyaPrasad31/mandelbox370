@@ -1,7 +1,7 @@
 mandelbox370
 ============
 
-Mandelbox Renderer for PMATH 3702
+Mandelbox Renderer for PMATH 370 -> Fractals and Chaos Theory 
 
 View at https://rudi-c.github.io/mandelbox370/
 
